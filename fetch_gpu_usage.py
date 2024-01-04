@@ -7,9 +7,7 @@ import yaml
 
 import polars as pl
 
-API = wandb.Api()
-
-QUERY = """
+QUERY = """\
 query GetGpuInfoForProject($project: String!, $entity: String!) {
   project(name: $project, entityName: $entity) {
     name
@@ -31,7 +29,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!) {
       }
     }
   }
-}
+}\
 """
 
 
@@ -40,34 +38,32 @@ def get_runs_info(company_name):
         f"Getting GPU seconds by project and GPU type for entity '{company_name}'",
         file=sys.stderr,
     )
-
-    project_names = [p.name for p in API.projects(company_name)]
+    api = wandb.Api()
+    project_names = [p.name for p in api.projects(company_name)]
     gpu_info_query = gql(QUERY)
 
     runs_gpu_data = []
     for project_name in project_names:
         print(f"Scanning '{project_name}'...", file=sys.stderr)
 
-        # Use internal API to make a custom GQL query
-        results = API.client.execute(
+        # Use internal API to make a custom GraphQL query
+        results = api.client.execute(
             gpu_info_query, {"project": project_name, "entity": company_name}
         )
 
         # Destructure the result into a list of runs
-        # NOTE この下2行理解しておきたい
         run_edges = results.get("project").get("runs").get("edges")
         runs = [e.get("node") for e in run_edges]
-        # print(runs)
 
         # Rip through the runs and tally up duration * gpuCount for each gpu type ("gpu")
         for run in runs:
             # runInfoがなければスキップ
-            if not run["runInfo"]:
+            if not run.get("runInfo"):
                 continue
 
-            # 素直に取得するデータ
-            runInfo = run["runInfo"]
+            # GPU使用量計算に使うデータ
             duration = run["computeSeconds"]
+            runInfo = run["runInfo"]
             gpu_name = runInfo["gpu"]
             gpuCount = runInfo["gpuCount"]
 
@@ -82,7 +78,7 @@ def get_runs_info(company_name):
                     "gpu_name": gpu_name,
                     "gpu_count": gpuCount,
                     "duration": duration,
-                    "gpu_seconds": gpuCount * duration if gpuCount else 0,
+                    "gpu_seconds": gpuCount * duration if gpu_name else 0,
                 }
             )
     return runs_gpu_data
@@ -128,10 +124,12 @@ if __name__ == "__main__":
         df_list.append(tmp_df)
     # 1つのDataFrameに集約してデータ整形
     runs_gpu_df = pl.concat(df_list).pipe(agg_df)
-    print(runs_gpu_df)
-    # tableを出力
-    # tbl = wandb.Table(data=runs_gpu_df.to_pandas())
-    # with wandb.init(
-    #     entity="wandb-japan", project="gpu-dashboard", name=today_date()
-    # ) as run:
-    #     wandb.log({"overall_gpu_usage": tbl})
+    if len(sys.argv) == 1:  # オプションなければtableを出力
+        tbl = wandb.Table(data=runs_gpu_df.to_pandas())
+        with wandb.init(
+            entity="wandb-japan", project="gpu-dashboard", name=today_date()
+        ) as run:
+            wandb.log({"overall_gpu_usage": tbl})
+    else:  # デバッグモード
+        # TODO argparseを使う --debugオプションを作る
+        print(runs_gpu_df)
