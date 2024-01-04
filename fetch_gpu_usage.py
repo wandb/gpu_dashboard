@@ -7,6 +7,8 @@ import yaml
 
 import polars as pl
 
+API = wandb.Api()
+
 QUERY = """
 query GetGpuInfoForProject($project: String!, $entity: String!) {
   project(name: $project, entityName: $entity) {
@@ -38,8 +40,8 @@ def get_runs_info(company_name):
         f"Getting GPU seconds by project and GPU type for entity '{company_name}'",
         file=sys.stderr,
     )
-    api = wandb.Api()
-    project_names = [p.name for p in api.projects(company_name)]
+
+    project_names = [p.name for p in API.projects(company_name)]
     gpu_info_query = gql(QUERY)
 
     runs_gpu_data = []
@@ -47,7 +49,7 @@ def get_runs_info(company_name):
         print(f"Scanning '{project_name}'...", file=sys.stderr)
 
         # Use internal API to make a custom GQL query
-        results = api.client.execute(
+        results = API.client.execute(
             gpu_info_query, {"project": project_name, "entity": company_name}
         )
 
@@ -58,24 +60,16 @@ def get_runs_info(company_name):
         # print(runs)
 
         # Rip through the runs and tally up duration * gpuCount for each gpu type ("gpu")
-        project_gpus = {}
         for run in runs:
             # runInfoがなければスキップ
             if not run["runInfo"]:
                 continue
 
+            # 素直に取得するデータ
             runInfo = run["runInfo"]
             duration = run["computeSeconds"]
-            gpu = runInfo["gpu"]
+            gpu_name = runInfo["gpu"]
             gpuCount = runInfo["gpuCount"]
-
-            # gpuを使っていれば使用量を計算
-            # NOTE この下5行理解しておきたい
-            if gpu:
-                if gpu not in project_gpus:
-                    project_gpus[gpu] = 0
-                if gpuCount:
-                    project_gpus[gpu] += gpuCount * duration
 
             # データ追加
             runs_gpu_data.append(
@@ -85,10 +79,10 @@ def get_runs_info(company_name):
                     "updated_at": run["updatedAt"],
                     "run_name": run["name"],
                     "username": run["user"]["username"],
-                    "gpu": gpu,
+                    "gpu_name": gpu_name,
                     "gpu_count": gpuCount,
                     "duration": duration,
-                    "gpu_seconds": gpuCount * duration if gpuCount is not None else 0,
+                    "gpu_seconds": gpuCount * duration if gpuCount else 0,
                 }
             )
     return runs_gpu_data
