@@ -1,17 +1,18 @@
 import argparse
+import datetime
 import yaml
 
 import polars as pl
 import wandb
 
-from fetch_runs import fetch_runs
-from utils import today_date
+from fetch_runs import fetch_runs, fetch_runs_dev
 
 
 def proc_company(df):
     """企業ごとのテーブルを作る"""
     df = (
-        df.with_columns(
+        df.filter(pl.col("duration") > 0)
+        .with_columns(
             # datetime型に変更
             pl.col("created_at").str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S"),
             # 秒から分に変更
@@ -53,6 +54,17 @@ def proc_overall(df):
     return new_df
 
 
+def today_date() -> str:
+    """日本の時刻を取得する"""
+    # 日本の時差
+    JST = datetime.timezone(datetime.timedelta(hours=+9))
+    # 現在のJSTの時間を取得
+    now_jst = datetime.datetime.now(JST)
+    # 年月日までを文字列でフォーマット
+    formatted_date_time = now_jst.strftime("%Y-%m-%d %H:%M")
+    return formatted_date_time
+
+
 if __name__ == "__main__":
     # 実行モード取得
     parser = argparse.ArgumentParser()
@@ -68,7 +80,11 @@ if __name__ == "__main__":
     # runsのデータを取得
     df_list = []
     for company_name in config["companies"]:
-        runs_gpu_data = fetch_runs(company_name=company_name, debug_mode=args.debug)
+        runs_gpu_data = (
+            fetch_runs(company_name=company_name)
+            if not args.debug
+            else fetch_runs_dev(company_name=company_name)
+        )
         # - - - - -
         # Table2
         # - - - - -
