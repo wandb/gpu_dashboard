@@ -7,13 +7,9 @@ from wandb_gql import gql
 from query import QUERY
 
 
-def fetch_runs(company_name: str, debug_mode=False) -> List[Dict[str, Any]]:
+def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
     """entityからGPUを使用しているrunsのデータを取得する"""
     print(f"Getting GPU seconds by project and GPU type for entity '{company_name}'")
-    if debug_mode:
-        with open(f"sample_data/{company_name}.json", "r") as f:
-            runs_data = json.load(f)
-        return runs_data
     api = wandb.Api()
     project_names = [p.name for p in api.projects(company_name)]
     gpu_info_query = gql(QUERY)
@@ -61,4 +57,11 @@ def fetch_runs(company_name: str, debug_mode=False) -> List[Dict[str, Any]]:
                     # "gpu_seconds": gpuCount * duration,
                 }
             )
+    return runs_data
+
+
+def fetch_runs_dev(company_name: str) -> List[Dict[str, Any]]:
+    """entityからGPUを使用しているrunsのデータを取得する(すでに取得してあるjsonを使用)"""
+    with open(f"sample_data/{company_name}.json", "r") as f:
+        runs_data = json.load(f)
     return runs_data
