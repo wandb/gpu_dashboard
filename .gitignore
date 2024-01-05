@@ -165,3 +165,4 @@ uninstall.txt
 
 # とりあえず除外
 wandb/*
+sample_data/*
