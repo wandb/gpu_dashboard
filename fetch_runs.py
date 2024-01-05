@@ -35,6 +35,9 @@ def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
             # GPUなければスキップ
             if not run.get("runInfo").get("gpu"):
                 continue
+            # 時間が0のものはスキップ
+            if run["computeSeconds"] == 0:
+                continue
 
             # GPU使用量計算に使うデータ
             duration = run["computeSeconds"]
