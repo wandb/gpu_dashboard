@@ -128,13 +128,13 @@ def log2wandb(
     df,
     tbl_name: str,
     tags: List[str],
-    entity: str = "wandb-japan",
-    project: str = "gpu-dashboard",
 ) -> None:
     "DataFrameをWandBに出力する"
     tbl = wandb.Table(data=df.to_pandas())
-    config = dict(entity=entity, project=project, name=today_date(), tags=tags)
-    with wandb.init(config=config) as run:
+    config = dict(
+        entity="wandb-japan", project="gpu-dashboard", name=today_date(), tags=tags
+    )
+    with wandb.init(**config) as run:
         wandb.log({tbl_name: tbl})
     return None
 
@@ -158,12 +158,12 @@ if __name__ == "__main__":
     df_list = []
     for company_name in config["companies"]:
         # debugモードのときはjsonをread
-        runs_gpu_data = fetch_runs_dev(company_name=company_name)
-        # runs_gpu_data = (
-        # fetch_runs(company_name=company_name)
-        # if not args.debug
-        # else fetch_runs_dev(company_name=company_name)
-        # )
+        # runs_gpu_data = fetch_runs_dev(company_name=company_name)
+        runs_gpu_data = (
+            fetch_runs(company_name=company_name)
+            if not args.debug
+            else fetch_runs_dev(company_name=company_name)
+        )
         # - - - - -
         # Table2
         # - - - - -
