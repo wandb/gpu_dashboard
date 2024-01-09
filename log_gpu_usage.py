@@ -69,9 +69,8 @@ def company_usage(df):
 
     usage_per_hours = (
         pl.concat(df_list)  # runを集約
-        .group_by(["datetime"])
+        .group_by(["datetime"], maintain_order=True)
         .agg((pl.col("gpu_count").sum() / 60).alias("total_gpu_hours"))  # 時間の単位を変更
-        .sort("datetime", descending=True)
     )
 
     # 連続した日付を持つDataFrame
@@ -90,6 +89,7 @@ def company_usage(df):
         .fill_null(0)
         .with_columns(pl.lit(company_name).alias("company_name"))  # 企業名のカラムを追加
         .select(["company_name", "datetime", "total_gpu_hours"])
+        .sort("datetime", descending=True)
     )
 
     return company_usage
@@ -178,6 +178,7 @@ if __name__ == "__main__":
         if args.debug:
             print(company_runs_df)
             print(company_usage_df)
+            print(company_usage_df.head(30 * 24))
         else:
             log2wandb(
                 df=company_runs_df,
@@ -187,6 +188,11 @@ if __name__ == "__main__":
             log2wandb(
                 df=company_usage_df,
                 tbl_name="company_hourly_gpu_usage",
+                tags=[company_name, "latest"],
+            )
+            log2wandb(
+                df=company_usage_df.head(30 * 24),
+                tbl_name="company_hourly_gpu_usage_within_30days",
                 tags=[company_name, "latest"],
             )
     # - - - - -
