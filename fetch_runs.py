@@ -60,6 +60,9 @@ def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
                     # "gpu_seconds": gpuCount * duration,
                 }
             )
+    # デバッグのためにjsonに書き込む
+    # with open(f"sample_data/{company_name}.json", "w") as f:
+    # json.dump(runs_data, f, indent=4)
     return runs_data
 
 

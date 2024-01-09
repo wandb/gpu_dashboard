@@ -14,7 +14,9 @@ def company_runs(df):
     new_df = (
         df.with_columns(
             # datetime型に変更
-            pl.col("created_at").str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S"),
+            pl.col("created_at")
+            .str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S")
+            .map_elements(lambda x: x + datetime.timedelta(hours=-9)),  # 時差を考慮
             # 秒から時間に変更
             (pl.col("duration") / 60 / 60).alias("duration_hours"),
         )
