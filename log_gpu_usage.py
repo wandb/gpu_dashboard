@@ -6,7 +6,10 @@ from typing import List
 import polars as pl
 import wandb
 
-from fetch_runs import fetch_runs, fetch_runs_dev
+from utils import fetch_runs, fetch_runs_dev, delete_project_tags
+
+with open("config.yml") as y:  # 企業名の書かれたyaml
+    CONFIG = yaml.safe_load(y)
 
 
 def company_runs(df):
@@ -131,6 +134,7 @@ def log2wandb(
     tbl_name: str,
     tags: List[str],
 ) -> None:
+    assert wandb.Api().default_entity == "wandb-japan"
     "DataFrameをWandBに出力する"
     tbl = wandb.Table(data=df.to_pandas())
     config = dict(
@@ -155,12 +159,16 @@ if __name__ == "__main__":
     # - - - - -
     # runデータ取得
     # - - - - -
-    with open("config.yml") as y:  # 企業名の書かれたyaml
-        config = yaml.safe_load(y)
+    # latestタグの削除
+    if not args.debug:
+        delete_project_tags(
+            entity=CONFIG["path_to_dashboard"]["entity"],
+            project=CONFIG["path_to_dashboard"]["project"],
+            delete_tags=["latest"],
+        )
     df_list = []
-    for company_name in config["companies"]:
+    for company_name in CONFIG["companies"]:
         # debugモードのときはjsonをread
-        # runs_gpu_data = fetch_runs_dev(company_name=company_name)
         runs_gpu_data = (
             fetch_runs(company_name=company_name)
             if not args.debug

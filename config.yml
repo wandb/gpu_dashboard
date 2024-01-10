@@ -1,3 +1,7 @@
 companies:
   - wandb-japan
-  # - llm-jp-eval
+  - llm-jp-eval
+
+path_to_dashboard:
+  entity: wandb-japan
+  project: gpu-dashboard
