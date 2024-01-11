@@ -2,6 +2,23 @@ import json
 from typing import Any, Dict, List
 import wandb
 from wandb_gql import gql
+from tqdm import tqdm
+
+
+def delete_project_tags(entity: str, project: str, delete_tags: List[str]) -> None:
+    """プロジェクトのrunsからタグを削除する"""
+    api = wandb.Api()
+    project_path = "/".join((entity, project))
+    runs = api.runs(path=project_path)
+    run_ids = ["/".join((project_path, run.id)) for run in runs]
+    assert run_ids, f"run_ids: {run_ids}"
+    for run_id in tqdm(run_ids):
+        run = api.run(path=run_id)
+        old_tags = run.tags
+        new_tags = [tag for tag in old_tags if tag not in delete_tags]
+        run.tags = new_tags
+        run.update()
+
 
 QUERY = """\
 query GetGpuInfoForProject($project: String!, $entity: String!) {
@@ -93,18 +110,3 @@ def fetch_runs_dev(company_name: str) -> List[Dict[str, Any]]:
     with open(f"sample_data/{company_name}.json", "r") as f:
         runs_data = json.load(f)
     return runs_data
-
-
-def delete_project_tags(entity: str, project: str, delete_tags: List[str]) -> None:
-    """プロジェクトのrunsからタグを削除する"""
-    api = wandb.Api()
-    project_path = "/".join((entity, project))
-    runs = api.runs(path=project_path)
-    run_ids = ["/".join((project_path, run.id)) for run in runs]
-    assert run_ids, f"run_ids: {run_ids}"
-    for run_id in run_ids:
-        run = api.run(path=run_id)
-        old_tags = run.tags
-        new_tags = [tag for tag in old_tags if tag not in delete_tags]
-        run.tags = new_tags
-        run.update()

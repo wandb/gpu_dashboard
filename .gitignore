@@ -166,3 +166,6 @@ uninstall.txt
 # とりあえず除外
 wandb/*
 sample_data/*
+
+# pip-remake前のrequirements.txtを記載したファイル
+uninstall.txt

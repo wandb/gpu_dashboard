@@ -168,12 +168,13 @@ if __name__ == "__main__":
         )
     df_list = []
     for company_name in CONFIG["companies"]:
+        runs_gpu_data = fetch_runs(company_name=company_name)
         # debugモードのときはjsonをread
-        runs_gpu_data = (
-            fetch_runs(company_name=company_name)
-            if not args.debug
-            else fetch_runs_dev(company_name=company_name)
-        )
+        # runs_gpu_data = (
+        #     fetch_runs(company_name=company_name)
+        #     if not args.debug
+        #     else fetch_runs_dev(company_name=company_name)
+        # )
         # - - - - -
         # Table2
         # - - - - -
