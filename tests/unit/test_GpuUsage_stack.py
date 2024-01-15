@@ -1,14 +1,16 @@
 import aws_cdk as core
 import aws_cdk.assertions as assertions
 
-from foo.foo_stack import FooStack
+from GpuUsage.GpuUsasge_stack import GpuUsageStack
+
 
 # example tests. To run these tests, uncomment this file along with the example
-# resource in foo/foo_stack.py
+# resource in gpuUsage/gpuUsage_stack.py
 def test_sqs_queue_created():
     app = core.App()
-    stack = FooStack(app, "foo")
+    stack = GpuUsageStack(app, "GpuUsage")
     template = assertions.Template.from_stack(stack)
+
 
 #     template.has_resource_properties("AWS::SQS::Queue", {
 #         "VisibilityTimeout": 300

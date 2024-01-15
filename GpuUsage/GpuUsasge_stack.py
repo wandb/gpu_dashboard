@@ -14,14 +14,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class FooStack(Stack):
+class GpuUsageStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         # 1. IAM poloicy (for Lambda Function)
         lambdaRole = aws_iam.Role(
             self,
             "lambdaRole",
-            role_name="foo-lambda-role",
+            role_name="GpuUsage-lambda-role",
             assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com"),
         )
         lambdaRole.add_managed_policy(
@@ -33,7 +33,7 @@ class FooStack(Stack):
         # 2. lambda configuration
         lambdaFn = lambda_.DockerImageFunction(
             self,
-            "FooFunction",  # リソース名
+            "GpuUsageFunction",  # リソース名
             timeout=Duration.seconds(300),
             code=lambda_.DockerImageCode.from_image_asset("lambda/"),
             role=lambdaRole,

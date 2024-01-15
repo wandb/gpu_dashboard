@@ -8,8 +8,6 @@ from wandb_gql import gql
 import pandas as pd
 import polars as pl
 
-# logging.basicConfig(level=logging.INFO)
-
 # - - - - - - - - - -
 # 設定
 # - - - - - - - - - -
