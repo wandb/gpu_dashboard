@@ -57,6 +57,6 @@
     "@aws-cdk/aws-rds:auroraClusterChangeScopeOfInstanceParameterGroupWithEachParameters": true,
     "@aws-cdk/aws-appsync:useArnForSourceApiAssociationIdentifier": true,
     "@aws-cdk/aws-rds:preventRenderingDeprecatedCredentials": true,
-    "@aws-cdk/core:bootstrapQualifier": "rf4849bad"
+    "@aws-cdk/core:bootstrapQualifier": "rf4849cat"
   }
 }
