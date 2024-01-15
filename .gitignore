@@ -159,14 +159,12 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# notebookは管理難しいので除外
-*.ipynb
-uninstall.txt
+*.swp
+package-lock.json
 
-# とりあえず除外
-wandb/*
-sample_data/*
+# CDK asset staging directory
+.cdk.staging
+cdk.out
 
-# pip-remake前のrequirements.txtを記載したファイル
-# test
-uninstall.txt
+# added
+wandb/**/*

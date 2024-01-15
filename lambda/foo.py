@@ -1,9 +1,9 @@
 import datetime
 import logging
-import yaml
 from typing import Any, Dict, List
 
 import wandb
+import yaml
 from wandb_gql import gql
 import pandas as pd
 import polars as pl
@@ -15,7 +15,7 @@ import polars as pl
 # - - - - - - - - - -
 
 # 企業名の書かれたyaml
-with open("config.yml") as y:
+with open("config.yaml") as y:
     CONFIG = yaml.safe_load(y)
 
 # gqlのクエリ
@@ -33,6 +33,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!) {
                     computeSeconds
                     createdAt
                     updatedAt
+                    state
                     runInfo {
                         gpuCount
                         gpu
@@ -66,7 +67,7 @@ def remove_project_tags(entity: str, project: str, delete_tags: List[str]) -> No
 
 
 def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
-    """entityからGPUを使用しているrunsのデータを取得する"""
+    """entityごとにGPUを使用しているrunsのデータを取得する"""
     # print(f"Getting GPU seconds by project and GPU type for entity '{company_name}'")
     api = wandb.Api()
     project_names = [p.name for p in api.projects(company_name)]
@@ -92,9 +93,6 @@ def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
             # GPUなければスキップ
             if not run.get("runInfo").get("gpu"):
                 continue
-            # 時間が0のものはスキップ
-            if run["computeSeconds"] == 0:
-                continue
 
             # GPU使用量計算に使うデータ
             duration = run["computeSeconds"]
@@ -115,6 +113,7 @@ def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
                     "gpu_count": gpuCount,
                     "duration": duration,
                     # "gpu_seconds": gpuCount * duration,
+                    "state": run["state"],
                 }
             )
     return runs_data
@@ -124,11 +123,22 @@ def company_runs(df):
     """企業ごとのrunのlogのテーブルを作る"""
     new_df = (
         df.with_columns(
-            # datetime型に変更
+            pl.col("created_at").str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S")
+        )
+        # 現在時刻までの経過時間
+        .with_columns(
             pl.col("created_at")
-            .str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S")
-            .map_elements(lambda x: x + datetime.timedelta(hours=-9)),  # 時差を考慮
-            # 秒から時間に変更
+            .map_elements(lambda x: (now_utc() - x).total_seconds())
+            .alias("elapsed_seconds")
+        )
+        .with_columns(
+            pl.when(pl.col("state") == "running")
+            .then("elapsed_seconds")
+            .otherwise("duration")
+            .alias("duration")
+        )
+        # 秒から時間に変更
+        .with_columns(
             (pl.col("duration") / 60 / 60).alias("duration_hours"),
         )
         .select(
@@ -190,7 +200,7 @@ def company_usage(df):
     expanded_datetime = pl.DataFrame(
         pl.datetime_range(
             usage_per_hours["datetime"].min(),
-            usage_per_hours["datetime"].max(),
+            now_utc(),
             interval="1h",
             eager=True,
         ).alias("datetime")
@@ -226,15 +236,9 @@ def overall_usage(df):
     return new_df
 
 
-def today_date() -> str:
-    """日本の時刻を取得する"""
-    # 日本の時差
-    JST = datetime.timezone(datetime.timedelta(hours=+9))
-    # 現在のJSTの時間を取得
-    now_jst = datetime.datetime.now(JST)
-    # 年月日までを文字列でフォーマット
-    formatted_date_time = now_jst.strftime("%Y-%m-%d %H:%M")
-    return formatted_date_time
+def now_utc() -> str:
+    """UTCの現在時刻を取得する"""
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 def log2wandb(
@@ -249,7 +253,8 @@ def log2wandb(
     config = dict(
         entity=entity,
         project=project,
-        name=today_date(),
+        # 時差を考慮
+        name=(now_utc() + datetime.timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
         tags=tags,
     )
     with wandb.init(**config) as run:
