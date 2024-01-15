@@ -168,4 +168,5 @@ wandb/*
 sample_data/*
 
 # pip-remake前のrequirements.txtを記載したファイル
+# test
 uninstall.txt
