@@ -57,28 +57,83 @@
 WANDB_API_KEY="YOUR_API_KEY"
 ```
 
-2. Dockerを起動する
+2. aws cliに適切な資格情報とリージョンが設定されていることを確認する
+
+```bash
+$ aws configure list
+
+      Name                    Value             Type    Location
+      ----                    -----             ----    --------
+   profile                <not set>             None    None
+access_key     ******************** shared-credentials-file    
+secret_key     ******************** shared-credentials-file    
+    region           ap-northeast-1      config-file    ~/.aws/config
+```
+
+
+3. CDKを初めて使用する場合はセットアップをする
+```
+$ npm install -g aws-cdk
+```
+
+4. Pythonの仮想環境を作成する
+```bash
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ pip install -r requirements.txt
+```
+
+
 
 ### プロビジョニング・デプロイ
+Dockerを起動しプロビジョニングとデプロイを行う
 ```bash
-cdk bootstrap  --qualifier rf4849cat
-cdk deploy  --qualifier rf4849cat
+$ cdk bootstrap  --qualifier rf4849cat
+$ cdk deploy  --qualifier rf4849cat
 ```
+> コードの変更の場合は`cdk deploy  --qualifier rf4849cat`を実行すると変更が反映されます。
 
 ### リソースの削除
 ```bash
-cdk destroy
+$ cdk destroy
 ```
-> bootstrapやdeployに失敗する場合は、既存のCloudFormationスタックの修飾子が競合している可能性があります。cdk.json最終行に記載の修飾子を```rf4849cat```から```rf4849dog```に修正するなどして再度試してみください。修正後はコマンドの変更を忘れないこと
+> bootstrapやdeployに失敗する場合は、既存のCloudFormationスタックの修飾子が競合している可能性があります。cdk.json最終行に記載の修飾子を```rf4849cat```から```rf4849dog```に修正するなどして再度試してみてください。修正後はコマンドの変更を忘れないこと
 
 ### 動作確認
 
-AWS Lambdaにアクセスしてテストをクリックすることで動作確認ができます。実行には数分を要します。
+AWS Lambdaにアクセスしてテストをクリックすることで動作確認ができる。実行には数分を要する。
 
 ## 運用監視
 
 1. AWS CloudWatchにアクセスする
 2. ロググループをクリックする
-3.  "GpuUsageStack"で検索しクリックする
+3.  "GpuUsageStack"で検索し該当のロググループをクリックする
 4. ログストリームから見たいログをクリックする
 5. タイムスタンプ、メッセージを確認する
+
+## ローカルデバッグ
+
+### Pythonスクリプトを直接実行する場合
+
+```bash
+$ cd lambda
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ pip install -r requirements.txt
+$ python3 GpuUsage.py
+```
+### Docker経由で実行する場合
+
+1. Lambdaをローカルでホストする
+
+```bash
+$ cd lambda
+$ docker build --platform linux/amd64 -t docker-image:test .
+$ docker run --platform linux/amd64 -p 9000:8080 docker-image:test
+```
+
+2. 別のTerminalからAPIをコールする 
+```
+$ curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
+```
+> TODO M1 MacではPolarsのCPU Checkでエラーが出てしまうので解決策を考える

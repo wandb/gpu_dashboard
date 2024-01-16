@@ -167,4 +167,4 @@ package-lock.json
 cdk.out
 
 # added
-wandb/**/*
+**/wandb/**/*

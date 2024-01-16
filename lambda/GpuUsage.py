@@ -2,11 +2,10 @@ import datetime
 import logging
 from typing import Any, Dict, List
 
+import polars as pl
 import wandb
 import yaml
 from wandb_gql import gql
-import pandas as pd
-import polars as pl
 
 # - - - - - - - - - -
 # 設定
