@@ -1,10 +1,8 @@
 # gpu-dashboard
-<!-- プロジェクト名を記載 -->
 
-このリポジトリは、AWS CDKを使用してインフラストラクチャリソースをプロビジョニングし、GPU dashboardを定期的に更新するLambda関数を作成します。
+This repository provisions infrastructure resources using AWS CDK and creates a Lambda function to periodically update the GPU dashboard.
 
-## 環境
-<!-- 言語、フレームワーク、ミドルウェア、インフラの一覧とバージョンを記載 -->
+## Environment
 
 | Language, Framework   | Version       |
 | --------------------- | ------------- |
@@ -18,46 +16,44 @@
 | macOS                 | Sonoma 14.1.2 |
 | Chipset               | Apple M1      |
 
-上記の環境で動作確認をしております。バージョンを厳密に一致させる必要ありませんが、デバッグ時の参考情報としてお使い下さい。その他のパッケージのバージョンは`requirements.txt`を参照してください。
+The repository has been tested in the above environment. It is not necessary to match the versions exactly, but please use this information as a reference when debugging. For versions of other packages, please refer to `requirements.txt`.
 
-## ディレクトリ構成
-<!-- Treeコマンドを使ってディレクトリ構成を記載 -->
+## Directory Structure
 
 ```
 .
-├── GpuUsage　# リソースのプロビジョニング
+├── GpuUsage　# Provision resources
 │   ├── GpuUsasge_stack.py
 │   └── __init__.py
-├── lambda  # Dockerのコンテナイメージ作成
+├── lambda  # Create Docker container images
 │   ├── Dockerfile
-│   ├── GpuUsage.py  # Lambdaに実行させる処理を記載
+│   ├── GpuUsage.py  # Write the code to be executed by Lambda
 │   ├── config.yaml
 │   └── requirements.txt
-├── tests  # テストコード（未整備）
+├── tests  # Test code (not yet organized)
 │   ├── __init__.py
 │   └── unit
 │       ├── __init__.py
 │       └── test_GpuUsage_stack.py
-├── .env  # 各自で作成
+├── .env  # To be created individually
 ├── README.md
 ├── app.py
-├── cdk.json  # プロビジョニングの設定ファイル
+├── cdk.json  # Configuration file for provisioning
 ├── requirements-dev.txt
 ├── requirements.txt
-└── source.bat  # Windows用のバッチファイル
+└── source.bat  # Batch file for Windows
 ```
 
-## 開発環境構築
-<!-- コンテナの作成方法、パッケージのインストール方法など、開発環境構築に必要な情報を記載 -->
+## Development Environment Setup
 
-### 環境準備
-1. .env ファイルを作成し以下の内容を記載する
+### Environment Preparation
+1. Create a .env file and include the following content
 
 ```
 WANDB_API_KEY="YOUR_API_KEY"
 ```
 
-2. aws cliに適切な資格情報とリージョンが設定されていることを確認する
+2. Ensure that the aws cli is configured with the appropriate credentials and region
 
 ```bash
 $ aws configure list
@@ -71,49 +67,47 @@ secret_key     ******************** shared-credentials-file
 ```
 
 
-3. CDKを初めて使用する場合はセットアップをする
+3. If using CDK for the first time, set it up
 ```
 $ npm install -g aws-cdk
 ```
 
-4. Pythonの仮想環境を作成する
+4. Create a Python virtual environment
 ```bash
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
-
-
-### プロビジョニング・デプロイ
-Dockerを起動しプロビジョニングとデプロイを行う
+### Provisioning & Deployment
+Start Docker and perform provisioning and deployment
 ```bash
 $ cdk bootstrap  --qualifier rf4849cat
 $ cdk deploy  --qualifier rf4849cat
 ```
-> コードの変更の場合は`cdk deploy  --qualifier rf4849cat`を実行すると変更が反映されます。
+> If there are code changes, execute `cdk deploy  --qualifier rf4849cat` to reflect the changes.
 
-### リソースの削除
+### Resource Deletion
 ```bash
 $ cdk destroy
 ```
-> bootstrapやdeployに失敗する場合は、既存のCloudFormationスタックの修飾子が競合している可能性があります。cdk.json最終行に記載の修飾子を```rf4849cat```から```rf4849dog```に修正するなどして再度試してみてください。修正後はコマンドの変更を忘れないこと
+> If bootstrap or deploy fails, it may be due to a conflict with an existing CloudFormation stack qualifier. Try changing the qualifier at the end of cdk.json from `rf4849cat` to `rf4849dog` and try again. Don't forget to change the command after the modification.
 
-### 動作確認
+### Operation Verification
 
-AWS Lambdaにアクセスしてテストをクリックすることで動作確認ができる。実行には数分を要する。
+You can verify the operation by clicking Test on AWS Lambda. It may take a few minutes to execute.
 
-## 運用監視
+## Operational Monitoring
 
-1. AWS CloudWatchにアクセスする
-2. ロググループをクリックする
-3.  "GpuUsageStack"で検索し該当のロググループをクリックする
-4. ログストリームから見たいログをクリックする
-5. タイムスタンプ、メッセージを確認する
+1. Access AWS CloudWatch
+2. Click on Log Groups
+3. Search for "GpuUsageStack" and click on the corresponding log group
+4. Click on the log stream you want to view
+5. Check the timestamp and message
 
-## ローカルデバッグ
+## Local Debugging
 
-### Pythonスクリプトを直接実行する場合
+### If executing the Python script directly
 
 ```bash
 $ cd lambda
@@ -122,9 +116,9 @@ $ source .venv/bin/activate
 $ pip install -r requirements.txt
 $ python3 GpuUsage.py
 ```
-### Docker経由で実行する場合
+### If executing via Docker
 
-1. Lambdaをローカルでホストする
+1. Host Lambda locally
 
 ```bash
 $ cd lambda
@@ -132,8 +126,8 @@ $ docker build --platform linux/amd64 -t docker-image:test .
 $ docker run --platform linux/amd64 -p 9000:8080 docker-image:test
 ```
 
-2. 別のTerminalからAPIをコールする 
+2. Call the API from another Terminal 
 ```
 $ curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
 ```
-> TODO M1 MacではPolarsのCPU Checkでエラーが出てしまうので解決策を考える
+> TODO Consider a solution for the error caused by the CPU Check of Polars on M1 Mac
