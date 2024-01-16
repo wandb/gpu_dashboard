@@ -34,7 +34,7 @@ class GpuUsageStack(Stack):
         lambdaFn = lambda_.DockerImageFunction(
             self,
             "GpuUsageFunction",  # リソース名
-            timeout=Duration.seconds(300),
+            timeout=Duration.minutes(10),  # タイムアウトを10分に設定
             code=lambda_.DockerImageCode.from_image_asset("lambda/"),
             role=lambdaRole,
             retry_attempts=0,
