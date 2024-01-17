@@ -169,3 +169,4 @@ cdk.out
 # added
 **/wandb/**/*
 **/Docker
+**/debug.ipynb
