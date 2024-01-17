@@ -239,8 +239,7 @@ def now_utc() -> str:
 
 
 def log2wandb(
-    df,
-    tbl_name: str,
+    tables: Dict[str, pl.DataFrame],
     tags: List[str],
 ) -> None:
     """Tableをwandbに出力する"""
@@ -255,8 +254,8 @@ def log2wandb(
         tags=tags,
     )
     with wandb.init(**config) as run:
-        tbl = wandb.Table(data=df.to_pandas())
-        wandb.log({tbl_name: tbl})
+        for tbl_name, df in tables.items():
+            wandb.log({tbl_name: wandb.Table(data=df.to_pandas())})
     return None
 
 
@@ -292,19 +291,13 @@ def handler(event, context):
         # Table1のためにリストに追加
         df_list.append(company_runs_df)
         # 出力
+        tables = {
+            "company_gpu_usage_log": company_runs_df,
+            "company_hourly_gpu_usage": company_usage_df,
+            "company_hourly_gpu_usage_within_30days": company_usage_df.head(30 * 24),
+        }
         log2wandb(
-            df=company_runs_df,
-            tbl_name="company_gpu_usage_log",
-            tags=[company_name, "latest"],
-        )
-        log2wandb(
-            df=company_usage_df,
-            tbl_name="company_hourly_gpu_usage",
-            tags=[company_name, "latest"],
-        )
-        log2wandb(
-            df=company_usage_df.head(30 * 24),
-            tbl_name="company_hourly_gpu_usage_within_30days",
+            tables=tables,
             tags=[company_name, "latest"],
         )
         logging.info("Done.")
@@ -315,8 +308,7 @@ def handler(event, context):
     logging.info("Processing overal gpu usage...")
     overall_usage_df = pl.concat(df_list).pipe(overall_usage)
     log2wandb(
-        df=overall_usage_df,
-        tbl_name="overall_gpu_usage",
+        tables={"overall_gpu_usage":overall_usage_df},
         tags=["overall", "latest"],
     )
     logging.info("Done.")
