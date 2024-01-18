@@ -32,6 +32,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!) {
                     computeSeconds
                     createdAt
                     updatedAt
+                    state
                     systemMetrics
                     runInfo {
                         gpuCount
@@ -165,7 +166,7 @@ def company_runs(df: pl.DataFrame) -> pl.DataFrame:
         .select(
             [
                 "company_name",
-                # "project",
+                "project",
                 "created_at",
                 "run_id",
                 "username",
