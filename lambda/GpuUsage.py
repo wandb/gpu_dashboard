@@ -2,6 +2,7 @@ import datetime
 import logging
 from typing import Any, Dict, List
 
+import numpy as np
 import polars as pl
 import wandb
 import yaml
@@ -14,6 +15,7 @@ from wandb_gql import gql
 # 企業名の書かれたyaml
 with open("config.yaml") as y:
     CONFIG = yaml.safe_load(y)
+PROJECT_START_DATE = datetime.datetime(2024, 1, 1)
 
 # gqlのクエリ
 QUERY = """\
@@ -30,7 +32,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!) {
                     computeSeconds
                     createdAt
                     updatedAt
-                    state
+                    systemMetrics
                     runInfo {
                         gpuCount
                         gpu
@@ -92,6 +94,7 @@ def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
                 continue
 
             # GPU使用量計算に使うデータ
+            systemMetrics = run["systemMetrics"]
             duration = run["computeSeconds"]
             runInfo = run["runInfo"]
             gpu_name = runInfo["gpu"]
@@ -106,7 +109,6 @@ def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
                     "created_at": run["createdAt"],
                     # "updated_at": run["updatedAt"],
                     "username": run["user"]["username"],
-                    "run_id": run["name"],
                     "gpu_name": gpu_name,
                     "gpu_count": gpuCount,
                     "duration": duration,
@@ -117,7 +119,28 @@ def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
     return runs_data
 
 
-def company_runs(df):
+def sys_metrics(entity: str, project: str, run_id: str) -> pl.DataFrame:
+    """runのmetricsを取得する"""
+    run_path = "/".join((entity, project, run_id))
+    api = wandb.Api()
+    run = api.run(path=run_path)
+    sys_metrics_df = pl.from_dataframe(run.history(stream="events"))
+    return sys_metrics_df
+
+
+def describe_metrics(df: pl.DataFrame) -> Dict[str, np.float16]:
+    """gpu utilizationの統計量を計算する"""
+    array = df.select(pl.col("^system\.gpu\..*\.gpu$")).to_numpy().ravel()
+    cleaned_array = array[~np.isnan(array)]
+    statistics = {
+        "average": np.average(cleaned_array).astype(np.float16),
+        "median": np.median(cleaned_array).astype(np.float16),
+        "max": np.max(cleaned_array).astype(np.float16),
+    }
+    return statistics
+
+
+def company_runs(df: pl.DataFrame) -> pl.DataFrame:
     """企業ごとのrunのlogのテーブルを作る"""
     new_df = (
         df.with_columns(
@@ -309,7 +332,7 @@ def handler(event, context):
     logging.info("Processing overal gpu usage...")
     overall_usage_df = pl.concat(df_list).pipe(overall_usage)
     log2wandb(
-        tables={"overall_gpu_usage":overall_usage_df},
+        tables={"overall_gpu_usage": overall_usage_df},
         tags=["overall", "latest"],
     )
     logging.info("Done.")
