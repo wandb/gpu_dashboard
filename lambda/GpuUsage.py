@@ -17,6 +17,9 @@ with open("config.yaml") as y:
     CONFIG = yaml.safe_load(y)
 PROJECT_START_DATE = datetime.datetime(2024, 1, 1)
 
+# UTCの現在時刻
+NOW_UTC = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
 # gqlのクエリ
 QUERY = """\
 query GetGpuInfoForProject($project: String!, $entity: String!) {
@@ -120,60 +123,60 @@ def fetch_runs(company_name: str) -> List[Dict[str, Any]]:
     return runs_data
 
 
-def sys_metrics(entity: str, project: str, run_id: str) -> pl.DataFrame:
-    """runのmetricsを取得する"""
-    run_path = "/".join((entity, project, run_id))
-    api = wandb.Api()
-    run = api.run(path=run_path)
-    sys_metrics_df = pl.from_dataframe(run.history(stream="events"))
-    return sys_metrics_df
-
-
-def describe_metrics(df: pl.DataFrame) -> Dict[str, np.float16]:
-    """gpu utilizationの統計量を計算する"""
-    array = df.select(pl.col("^system\.gpu\..*\.gpu$")).to_numpy().ravel()
-    cleaned_array = array[~np.isnan(array)]
-    statistics = {
-        "average": np.average(cleaned_array).astype(np.float16),
-        "median": np.median(cleaned_array).astype(np.float16),
-        "max": np.max(cleaned_array).astype(np.float16),
-    }
-    return statistics
-
-
 def company_runs(df: pl.DataFrame) -> pl.DataFrame:
     """企業ごとのrunのlogのテーブルを作る"""
     new_df = (
         df.with_columns(
-            pl.col("created_at").str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S")
+            pl.concat_str(
+                pl.col("company_name"),
+                pl.col("project"),
+                pl.col("run_id"),
+                separator="/",
+            ).alias("run_path"),
+            pl.col("created_at").str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S"),
+            pl.lit(NOW_UTC).alias("executed_at"),
         )
-        # 現在時刻までの経過時間
         .with_columns(
-            pl.col("created_at")
-            .map_elements(lambda x: (now_utc() - x).total_seconds())
-            .alias("elapsed_seconds")
+            # 現在時刻までの経過時間
+            pl.struct(["created_at", "executed_at"])
+            .map_elements(
+                lambda x: (x["executed_at"] - x["created_at"]).total_seconds()
+            )
+            .alias("elapsed_second")
         )
         .with_columns(
+            # state=runningの場合、取得時刻までの経過時間を計算する
             pl.when(pl.col("state") == "running")
-            .then("elapsed_seconds")
+            .then("elapsed_second")
             .otherwise("duration")
             .alias("duration")
         )
-        # 秒から時間に変更
         .with_columns(
-            (pl.col("duration") / 60 / 60).alias("duration_hours"),
+            (pl.col("duration") / 60 / 60).alias("duration_hour"),
+            # 秒から時間に変更
+        )
+        .with_columns(
+            # 終了時刻を取得
+            (
+                pl.col("created_at")
+                + pl.col("duration_hour").map_elements(
+                    lambda x: datetime.timedelta(hours=x)
+                )
+            ).alias("ended_at")
         )
         .select(
             [
                 "company_name",
                 "project",
-                "created_at",
                 "run_id",
+                "run_path",
                 "username",
+                "created_at",
+                "ended_at",
+                "state",
                 "gpu_name",
                 "gpu_count",
-                # "duration",
-                "duration_hours",
+                "duration_hour",
             ]
         )
         .sort(["created_at"], descending=True)
@@ -184,15 +187,7 @@ def company_runs(df: pl.DataFrame) -> pl.DataFrame:
 def company_usage(df):
     """企業ごとの時間ごとの使用量を計算する"""
     company_name = df["company_name"][0]  # 企業名取得
-    duration_df = df.with_columns(
-        # 終了時刻を取得
-        (
-            pl.col("created_at")
-            + pl.col("duration_hours").map_elements(
-                lambda x: datetime.timedelta(hours=x)
-            )
-        ).alias("ended_at")
-    ).select(["created_at", "ended_at", "gpu_count", "duration_hours"])
+    duration_df = df.select(["created_at", "ended_at", "gpu_count", "duration_hour"])
 
     # 行ごとにdictにする
     duration_list = duration_df.to_pandas().to_dict(orient="records")
@@ -222,7 +217,7 @@ def company_usage(df):
     expanded_datetime = pl.DataFrame(
         pl.datetime_range(
             usage_per_hours["datetime"].min(),
-            now_utc(),
+            NOW_UTC,
             interval="1h",
             eager=True,
         ).alias("datetime")
@@ -247,7 +242,7 @@ def overall_usage(df):
             # 年月
             pl.col("created_at").dt.strftime("%Y-%m").alias("date"),
             # gpu_hours
-            (pl.col("duration_hours") * pl.col("gpu_count")).alias("gpu_hours"),
+            (pl.col("duration_hour") * pl.col("gpu_count")).alias("gpu_hours"),
         )
         .group_by(["date", "company_name"])
         .agg([pl.col("gpu_hours").sum().alias("total_gpu_hours")])
@@ -256,11 +251,6 @@ def overall_usage(df):
         .sort(["date"], descending=True)
     )
     return new_df
-
-
-def now_utc() -> str:
-    """UTCの現在時刻を取得する"""
-    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 def log2wandb(
@@ -275,7 +265,7 @@ def log2wandb(
         entity=entity,
         project=project,
         # 時差を考慮
-        name=(now_utc() + datetime.timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
+        name=(NOW_UTC + datetime.timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
         tags=tags,
     )
     with wandb.init(**config) as run:
@@ -284,23 +274,64 @@ def log2wandb(
     return None
 
 
+def sys_metrics(run_path: str) -> pl.DataFrame:
+    """runのmetricsを取得する"""
+    api = wandb.Api()
+    run = api.run(path=run_path)
+    df = pl.from_dataframe(run.history(stream="events"))
+    return df
+
+
+def describe_metrics(df: pl.DataFrame) -> Dict[str, np.float16]:
+    """gpu utilizationの統計量を計算する"""
+    target = {"gpu_utilization": "gpu", "gpu_memory": "memory"}
+    statistics = {}
+    for k, v in target.items():
+        try:
+            array = (
+                df.select(pl.col(f"^system\.gpu\..*\.{v}$"))
+                .drop_nulls()
+                .to_numpy()
+                .ravel()
+            )
+            cleaned_array = array[~np.isnan(array)]
+            avg_ = np.average(cleaned_array)
+            max_ = np.max(cleaned_array)
+        except:
+            avg_, max_ = None, None
+        finally:
+            statistics[f"Average_{k}"] = avg_
+            statistics[f"Max_{k}"] = max_
+    return statistics
+
+
+def add_metrics(df):
+    """system metricsの統計量のカラムを追加する"""
+    rows = []
+    for run_path in df["run_path"]:
+        sys_metrics_df = sys_metrics(run_path=run_path)
+        statistics = describe_metrics(df=sys_metrics_df)
+        statistics["run_path"] = run_path
+        rows.append(statistics)
+    new_df = df.join(pl.DataFrame(rows), on="run_path", how="left")
+    return new_df
+
+
 # - - - - - - - - - -
 # handler
 # - - - - - - - - - -
-
-
 def handler(event, context):
     # - - - - -
     # runデータ取得
     # - - - - -
     # latestタグの削除
-    logging.info('removing "latest" tags...')
-    remove_project_tags(
-        entity=CONFIG["path_to_dashboard"]["entity"],
-        project=CONFIG["path_to_dashboard"]["project"],
-        delete_tags=["latest"],
-    )
-    logging.info("Done.")
+    # logging.info('removing "latest" tags...')
+    # remove_project_tags(
+    #     entity=CONFIG["path_to_dashboard"]["entity"],
+    #     project=CONFIG["path_to_dashboard"]["project"],
+    #     delete_tags=["latest"],
+    # )
+    # logging.info("Done.")
     df_list = []
     for company_name in CONFIG["companies"]:
         logging.info(f'Processing "{company_name}" gpu usage...')
@@ -308,7 +339,15 @@ def handler(event, context):
         # - - - - -
         # Table2
         # - - - - -
-        company_runs_df = pl.DataFrame(runs_gpu_data).pipe(company_runs)
+        company_runs_df = (
+            pl.DataFrame(runs_gpu_data)
+            .pipe(company_runs)
+            .filter(pl.col("ended_at").cast(pl.Date) == datetime.date.today())
+            .pipe(add_metrics)
+        )
+        # tables = {str(NOW_UTC): company_runs_df}
+        # log2wandb(tables=tables, tags=["test"])
+        # exit()
         # - - - - -
         # Table3
         # - - - - -
