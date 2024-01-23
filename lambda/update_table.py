@@ -1,5 +1,6 @@
 import datetime
 import json
+from pathlib import Path
 
 import pandas as pd
 import polars as pl
@@ -34,7 +35,8 @@ def read_run_table(run_path):
         return
     artifacts = run.logged_artifacts()
     table_artifacts = [a for a in artifacts if a.type == "run_table"]
-    json_path = table_artifacts[0].file()
+    artifacts_dir = table_artifacts[0].download("/tmp")
+    json_path = Path(artifacts_dir) / "new_runs.table.json"
     with open(json_path, "r") as f:
         json_str = json.load(f)
     df = pl.from_dataframe(
@@ -57,7 +59,6 @@ def collect_gpu_usage():
     for run_path in tqdm(run_paths):  # Tablesを出力しているrunも対象になるから時間がかかる
         df = read_run_table(run_path=run_path)
         if df is not None:
-            print("skipped")
             df_list.append(df)
     latest_data_df = (
         pl.concat([a for a in df_list if a is not None])

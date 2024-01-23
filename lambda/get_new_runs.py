@@ -14,7 +14,7 @@ from utils import back_to_utc, log2wandb, CONFIG, PROJECT_START_DATE, NOW_UTC
 # 設定
 # - - - - - - - - - -
 # 時刻
-DATE_DIFF = -6
+DATE_DIFF = 0
 if DATE_DIFF == 0:
     PROCESSED_AT = NOW_UTC + datetime.timedelta(hours=9)
     TGT_DATE = NOW_UTC.date()

@@ -168,5 +168,6 @@ cdk.out
 
 # added
 **/wandb/**/*
+**/artifacts/**/*
 **/Docker
 **/debug.ipynb

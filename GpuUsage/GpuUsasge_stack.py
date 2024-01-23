@@ -34,7 +34,7 @@ class GpuUsageStack(Stack):
         lambdaFn = lambda_.DockerImageFunction(
             self,
             "GpuUsageFunction",  # リソース名
-            timeout=Duration.minutes(10),  # タイムアウトを10分に設定
+            timeout=Duration.minutes(15),  # タイムアウトを10分に設定
             code=lambda_.DockerImageCode.from_image_asset("lambda/"),
             role=lambdaRole,
             retry_attempts=0,
@@ -44,7 +44,7 @@ class GpuUsageStack(Stack):
                 "WANDB_DIR": "/tmp",
                 "WANDB_CACHE_DIR": "/tmp",
             },
-            memory_size=1024,
+            memory_size=3000,
         )
         # 3. cron configuration
         rule = events.Rule(

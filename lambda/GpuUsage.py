@@ -8,7 +8,7 @@ from update_table import (
 
 
 def handler(event, context):
-    # get_new_runs()
+    get_new_runs()
     remove_latest_tags()
     latest_data_df = collect_gpu_usage()
     update_companies_table(latest_data_df)
