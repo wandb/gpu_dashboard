@@ -5,7 +5,6 @@ from pathlib import Path
 import pandas as pd
 import polars as pl
 import wandb
-from tqdm import tqdm
 
 from utils import (
     back_to_utc,
@@ -56,7 +55,7 @@ def collect_gpu_usage():
         project=CONFIG["path_to_dashboard"]["project"],
     )
     df_list = []
-    for run_path in tqdm(run_paths):  # Tablesを出力しているrunも対象になるから時間がかかる
+    for run_path in run_paths:  # Tablesを出力しているrunも対象になるから時間がかかる
         df = read_run_table(run_path=run_path)
         if df is not None:
             df_list.append(df)
@@ -125,7 +124,7 @@ def agg_hourly_usage(df):
 
 
 def update_companies_table(latest_data_df):
-    for company_name in tqdm(CONFIG["companies"]):
+    for company_name in CONFIG["companies"]:
         run_gpu_usage = latest_data_df.filter(
             pl.col("company_name") == company_name
         ).pipe(back_to_utc)

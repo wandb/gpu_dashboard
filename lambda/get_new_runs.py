@@ -5,7 +5,6 @@ from typing import Any
 import numpy as np
 import polars as pl
 import wandb
-from tqdm import tqdm
 from wandb_gql import gql
 
 from utils import back_to_utc, log2wandb, CONFIG, PROJECT_START_DATE, NOW_UTC
@@ -225,11 +224,9 @@ def add_metrics(df):
 def get_new_runs():
     """今日finishedになったrunとrunning状態のrunのデータを取得する"""
     df_list = []
-    for company_name in tqdm(CONFIG["companies"]):
-        logging.info(f'Retrieving "{company_name}" GPU usage ...')
+    for company_name in CONFIG["companies"]:
         daily_update_df = pl.DataFrame(fetch_runs(company_name)).pipe(process_runs)
         df_list.append(daily_update_df)
-        logging.info("Done.")
     today_df = pl.concat(df_list).pipe(add_metrics).pipe(back_to_utc)
     update_date = (TGT_DATE + datetime.timedelta(hours=9)).strftime("%Y-%m-%d")
     tables = {"new_runs": today_df}
