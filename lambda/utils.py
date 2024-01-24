@@ -116,3 +116,15 @@ def cast(df: pl.DataFrame) -> pl.DataFrame:
         pl.col("max_gpu_memory").cast(pl.Float64),
     )
     return new_df
+
+
+def set_date(target_date):
+    """更新時の日付をsetする"""
+    if target_date is None:
+        target_date = datetime.date.today()
+        processed_at = NOW_UTC + datetime.timedelta(hours=9)
+    else:
+        processed_at = datetime.datetime.combine(
+            target_date + datetime.timedelta(days=1), datetime.time()
+        )
+    return target_date, processed_at

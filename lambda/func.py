@@ -16,35 +16,20 @@ from utils import (
     remove_project_tags,
     CONFIG,
     NOW_UTC,
-    PROJECT_START_DATE,
-    UPDATE_DATE_STR,
     QUERY,
 )
 
 
 # - - - - - - - - - -
-# 設定
-# - - - - - - - - - -
-# 時刻
-DATE_DIFF = -15
-if DATE_DIFF == 0:
-    PROCESSED_AT = NOW_UTC + datetime.timedelta(hours=9)
-    TGT_DATE = NOW_UTC.date()
-else:
-    PROCESSED_AT = datetime.datetime.combine(
-        NOW_UTC + datetime.timedelta(days=DATE_DIFF + 1), datetime.time()
-    )
-    TGT_DATE = (NOW_UTC + datetime.timedelta(days=DATE_DIFF, hours=9)).date()
-
-
-# - - - - - - - - - -
 # メインの処理
 # - - - - - - - - - -
-def get_new_runs():
+def get_new_runs(target_date, processed_at):
     """今日finishedになったrunとrunning状態のrunのデータを取得する"""
     df_list = []
     for company_name in tqdm(CONFIG["companies"]):
-        daily_update_df = pl.DataFrame(fetch_runs(company_name)).pipe(process_runs)
+        daily_update_df = pl.DataFrame(fetch_runs(company_name)).pipe(
+            process_runs, target_date=target_date, processed_at=processed_at
+        )
         if not daily_update_df.is_empty():
             df_list.append(daily_update_df)
     if df_list:
@@ -54,45 +39,50 @@ def get_new_runs():
         return pl.DataFrame()
 
 
-def update_data_src(new_runs_df: pl.DataFrame) -> pl.DataFrame:
+def update_data_src(df: pl.DataFrame, target_date) -> pl.DataFrame:
     """今日取得したrunと過去に取得したrunをconcatしてartifactsをupdateする"""
+    target_date_str = target_date.strftime("%Y-%m-%d")
     with wandb.init(
-        name=f"Updated_{TGT_DATE}",
+        name=f"Updated_{target_date_str}",
         project="gpu-dashboard",
         job_type="update-datest",
     ) as run:
-        # 過去のrunを取得
-        artifact = run.use_artifact("gpu-usage:latest")
-        artifact_dir = Path(artifact.download("/tmp"))
-        csv_path = artifact_dir / "gpu-usage.csv"
-        old_runs_df = pl.from_pandas(
-            pd.read_csv(
-                csv_path,
-                parse_dates=["created_at", "ended_at", "processed_at", "logged_at"],
-                date_format="ISO8601",
+        csv_path = Path("/tmp/gpu-usage.csv")
+        try:
+            # 過去のrunを取得
+            artifact = run.use_artifact("gpu-usage:latest")
+            artifact.download("/tmp")
+            old_runs_df = pl.from_pandas(
+                pd.read_csv(
+                    csv_path,
+                    parse_dates=["created_at", "ended_at", "processed_at", "logged_at"],
+                    date_format="ISO8601",
+                )
+            ).with_columns(
+                pl.col("created_at").cast(pl.Datetime("us")),
+                pl.col("ended_at").cast(pl.Datetime("us")),
+                pl.col("processed_at").cast(pl.Datetime("us")),
+                pl.col("logged_at").cast(pl.Datetime("us")),
             )
-        ).with_columns(
-            pl.col("created_at").cast(pl.Datetime("us")),
-            pl.col("ended_at").cast(pl.Datetime("us")),
-            pl.col("processed_at").cast(pl.Datetime("us")),
-            pl.col("logged_at").cast(pl.Datetime("us")),
-        )
-        if not new_runs_df.is_empty():
-            # concatして重複するrunを除外
-            all_runs_df = (
-                pl.concat((new_runs_df.pipe(cast), old_runs_df.pipe(cast)))
-                .sort("logged_at", descending=True)
-                .unique("run_path")
-                .sort(["ended_at", "logged_at"], descending=True)
-            )
+            if not df.is_empty():
+                # concatして重複するrunを除外
+                all_runs_df = (
+                    pl.concat((df.pipe(cast), old_runs_df.pipe(cast)))
+                    .sort("logged_at", descending=True)
+                    .unique("run_path")
+                    .sort(["ended_at", "logged_at"], descending=True)
+                )
+            else:
+                all_runs_df = old_runs_df.clone()
+        except:
+            all_runs_df = df.clone()
+        finally:
             # アーティファクト更新
             all_runs_df.write_csv(csv_path)
             artifact = wandb.Artifact(name="gpu-usage", type="dataset")
             artifact.add_file(local_path=csv_path)
             run.log_artifact(artifact)
             return all_runs_df
-        else:
-            return old_runs_df
 
 
 def remove_latest_tags() -> None:
@@ -106,11 +96,13 @@ def remove_latest_tags() -> None:
     return
 
 
-def update_companies_table(latest_data_df) -> None:
+def update_companies_table(df, target_date) -> None:
+    if df.is_empty():
+        return
     for company_name in tqdm(CONFIG["companies"]):
-        run_gpu_usage = latest_data_df.filter(
-            pl.col("company_name") == company_name
-        ).pipe(back_to_utc)
+        run_gpu_usage = df.filter(pl.col("company_name") == company_name).pipe(
+            back_to_utc
+        )
         if len(run_gpu_usage):
             hourly_gpu_usage = run_gpu_usage.pipe(agg_hourly_usage)
             tables = {
@@ -120,15 +112,18 @@ def update_companies_table(latest_data_df) -> None:
                     30 * 24
                 ),
             }
+            target_date_str = target_date.strftime("%Y-%m-%d")
             log2wandb(
-                run_name=f"Tables_{UPDATE_DATE_STR}",
+                run_name=f"Tables_{target_date_str}",
                 tables=tables,
                 tags=[company_name, "latest"],
             )
     return
 
 
-def update_overall_table(df):
+def update_overall_table(df, target_date):
+    if df.is_empty():
+        return
     # 1つのDataFrameに集約してデータ整形
     overall_usage_df = (
         df.with_columns(
@@ -141,12 +136,13 @@ def update_overall_table(df):
         .sort(["company_name"])
         .sort(["date"], descending=True)
     )
+    target_date_str = target_date.strftime("%Y-%m-%d")
     log2wandb(
-        run_name=f"Tables_{UPDATE_DATE_STR}",
+        run_name=f"Tables_{target_date_str}",
         tables={"overall_gpu_usage": overall_usage_df},
         tags=["overall", "latest"],
     )
-    return overall_usage_df
+    return
 
 
 # - - - - - - - - - -
@@ -198,7 +194,7 @@ def fetch_runs(company_name: str) -> list[dict[str, Any]]:
     return runs_data
 
 
-def process_runs(df: pl.DataFrame) -> pl.DataFrame:
+def process_runs(df: pl.DataFrame, target_date, processed_at) -> pl.DataFrame:
     """企業ごとのrunのテーブルを作る"""
     new_df = (
         df.with_columns(
@@ -206,13 +202,8 @@ def process_runs(df: pl.DataFrame) -> pl.DataFrame:
             pl.col("created_at")
             .str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S")
             .map_elements(lambda x: x + datetime.timedelta(hours=9)),
-            pl.lit(PROCESSED_AT).alias("processed_at"),  # 経過時間取得のために一時的に作成
+            pl.lit(processed_at).alias("processed_at"),  # 経過時間取得のために一時的に作成
             pl.lit(NOW_UTC + datetime.timedelta(hours=9)).alias("logged_at"),
-        )
-        .filter(
-            # 軽量化のため過去のデータを削除
-            pl.col("created_at").cast(pl.Date)
-            >= PROJECT_START_DATE
         )
         .with_columns(
             # runにaccessするためにpathを作成
@@ -250,8 +241,8 @@ def process_runs(df: pl.DataFrame) -> pl.DataFrame:
             ).alias("ended_at")
         )
         .filter(
-            (pl.col("created_at").cast(pl.Date) <= TGT_DATE)
-            & (pl.col("ended_at").cast(pl.Date) == TGT_DATE)
+            (pl.col("created_at").cast(pl.Date) <= target_date)
+            & (pl.col("ended_at").cast(pl.Date) == target_date)
         )
         .select(
             [

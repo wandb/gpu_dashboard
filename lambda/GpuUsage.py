@@ -7,16 +7,20 @@ from func import (
     update_companies_table,
     update_overall_table,
 )
+from utils import set_date
 
 
 def handler(event, context):
-    tgt_date = None  # 今日を取得する場合はNone
-    # tgt_date = datetime.datetime(2024, 1, 9)
-    new_runs_df = get_new_runs()
-    all_runs_df = update_data_src(new_runs_df)
+    # 対象とする日付を定義。今日を取得する場合はNone
+    target_date = None
+    # for day in range(6, 7):
+    # target_date = datetime.date(2023, 12, day)
+    target_date, processed_at = set_date(target_date=target_date)
+    new_runs_df = get_new_runs(target_date=target_date, processed_at=processed_at)
+    all_runs_df = update_data_src(df=new_runs_df, target_date=target_date)
     remove_latest_tags()
-    update_companies_table(all_runs_df)
-    update_overall_table(all_runs_df)
+    update_companies_table(df=all_runs_df, target_date=target_date)
+    update_overall_table(df=all_runs_df, target_date=target_date)
     return
 
 
