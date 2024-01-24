@@ -227,7 +227,8 @@ def get_new_runs():
     df_list = []
     for company_name in CONFIG["companies"]:
         daily_update_df = pl.DataFrame(fetch_runs(company_name)).pipe(process_runs)
-        df_list.append(daily_update_df)
+        if len(daily_update_df):
+            df_list.append(daily_update_df)
     today_df = pl.concat(df_list).pipe(add_metrics).pipe(back_to_utc)
     return today_df
 

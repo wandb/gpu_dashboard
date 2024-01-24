@@ -12,9 +12,39 @@ with open("config.yaml") as y:
 # 日付
 PROJECT_START_DATE = datetime.date(2024, 1, 1)
 NOW_UTC = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+UPDATE_DATE_STR = (NOW_UTC + datetime.timedelta(hours=9)).strftime("%Y-%m-%d")
+
+# gqlのクエリ
+QUERY = """\
+query GetGpuInfoForProject($project: String!, $entity: String!) {
+    project(name: $project, entityName: $entity) {
+        name
+        runs {
+            edges {
+                node {
+                    name
+                    user {
+                        username
+                    }
+                    computeSeconds
+                    createdAt
+                    updatedAt
+                    state
+                    systemMetrics
+                    runInfo {
+                        gpuCount
+                        gpu
+                    }
+                }
+            }
+        }
+    }
+}\
+"""
 
 
-def back_to_utc(df):
+# 関数
+def back_to_utc(df: pl.DataFrame) -> pl.DataFrame:
     """UI上で日本時間になるようにするためUTC時間に戻す"""  # TODO ダサいからリファクタ
     datetime_cols = ["created_at", "ended_at", "logged_at", "processed_at"]
     new_df = df.clone()
@@ -28,7 +58,7 @@ def back_to_utc(df):
     return new_df
 
 
-def get_run_paths(entity, project):
+def get_run_paths(entity: str, project: str) -> list[str]:
     """プロジェクト内のrun_pathを取得する"""
     api = wandb.Api()
     project_path = "/".join((entity, project))
@@ -59,10 +89,12 @@ def log2wandb(
     return None
 
 
-def remove_project_tags(entity: str, project: str, delete_tags: list[str]) -> None:
+def remove_project_tags(
+    entity: str, project: str, delete_tags: list[str], head: int
+) -> None:
     """プロジェクトのrunsからタグを削除する"""
     api = wandb.Api()
-    run_paths = get_run_paths(entity=entity, project=project)[:8]
+    run_paths = get_run_paths(entity=entity, project=project)[:head]
     assert run_paths, f"run_paths: {run_paths}"
     for run_path in tqdm(run_paths):
         print(run_path)
@@ -71,3 +103,16 @@ def remove_project_tags(entity: str, project: str, delete_tags: list[str]) -> No
         new_tags = [tag for tag in old_tags if tag not in delete_tags]
         run.tags = new_tags
         run.update()
+
+
+def cast(df: pl.DataFrame) -> pl.DataFrame:
+    """Dataframeのdata型をcastする"""
+    new_df = df.with_columns(
+        pl.col("gpu_count").cast(pl.Int64),
+        pl.col("duration_hour").cast(pl.Float64),
+        pl.col("average_gpu_utilization").cast(pl.Float64),
+        pl.col("max_gpu_utilization").cast(pl.Float64),
+        pl.col("average_gpu_memory").cast(pl.Float64),
+        pl.col("max_gpu_memory").cast(pl.Float64),
+    )
+    return new_df
