@@ -145,7 +145,7 @@ def update_companies_table(latest_data_df):
     return
 
 
-def update_overall_table(df, logging=True):
+def update_overall_table(df):
     # 1つのDataFrameに集約してデータ整形
     overall_usage_df = (
         df.with_columns(
@@ -158,10 +158,9 @@ def update_overall_table(df, logging=True):
         .sort(["company_name"])
         .sort(["date"], descending=True)
     )
-    if logging:
-        log2wandb(
-            run_name=f"Tables_{UPDATE_DATE}",
-            tables={"overall_gpu_usage": overall_usage_df},
-            tags=["overall", "latest"],
-        )
+    log2wandb(
+        run_name=f"Tables_{UPDATE_DATE}",
+        tables={"overall_gpu_usage": overall_usage_df},
+        tags=["overall", "latest"],
+    )
     return overall_usage_df

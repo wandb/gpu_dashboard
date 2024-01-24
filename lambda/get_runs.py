@@ -1,19 +1,20 @@
 import datetime
-import logging
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import polars as pl
 import wandb
 from wandb_gql import gql
 
-from utils import back_to_utc, log2wandb, CONFIG, PROJECT_START_DATE, NOW_UTC
+from utils import back_to_utc, CONFIG, PROJECT_START_DATE, NOW_UTC
 
 # - - - - - - - - - -
 # 設定
 # - - - - - - - - - -
 # 時刻
-DATE_DIFF = 0
+DATE_DIFF = -6
 if DATE_DIFF == 0:
     PROCESSED_AT = NOW_UTC + datetime.timedelta(hours=9)
     TGT_DATE = NOW_UTC.date()
@@ -99,7 +100,7 @@ def fetch_runs(company_name: str) -> list[dict[str, Any]]:
 
 
 def process_runs(df: pl.DataFrame) -> pl.DataFrame:
-    """企業ごとのrunのlogのテーブルを作る"""
+    """企業ごとのrunのテーブルを作る"""
     new_df = (
         df.with_columns(
             # 元データはUTC時間になっている
@@ -228,14 +229,44 @@ def get_new_runs():
         daily_update_df = pl.DataFrame(fetch_runs(company_name)).pipe(process_runs)
         df_list.append(daily_update_df)
     today_df = pl.concat(df_list).pipe(add_metrics).pipe(back_to_utc)
-    update_date = (TGT_DATE + datetime.timedelta(hours=9)).strftime("%Y-%m-%d")
-    tables = {"new_runs": today_df}
-    log2wandb(
-        run_name=f"NewRuns_{update_date}",
-        tables=tables,
-        tags=[],
-    )
-    return
+    return today_df
+
+
+def update_data_src(new_runs_df):
+    """今日取得したrunと過去に取得したrunをconcatしてartifactsをupdateする"""
+    with wandb.init(
+        name=f"Updated_{TGT_DATE}",
+        project="gpu-dashboard",
+        job_type="update-datest",
+    ) as run:
+        # 過去のrunを取得
+        artifact = run.use_artifact("gpu-usage:latest")
+        artifact_dir = Path(artifact.download("/tmp"))
+        csv_path = artifact_dir / "gpu-usage.csv"
+        old_runs_df = pl.from_pandas(
+            pd.read_csv(
+                csv_path,
+                parse_dates=["created_at", "ended_at", "processed_at", "logged_at"],
+            )
+        ).with_columns(
+            pl.col("created_at").cast(pl.Datetime("us")),
+            pl.col("ended_at").cast(pl.Datetime("us")),
+            pl.col("processed_at").cast(pl.Datetime("us")),
+            pl.col("logged_at").cast(pl.Datetime("us")),
+        )
+        # concatして重複するrunを除外
+        all_runs_df = (
+            pl.concat((new_runs_df, old_runs_df))
+            .sort("logged_at", descending=True)
+            .unique("run_path")
+            .sort(["ended_at", "logged_at"], descending=True)
+        )
+        # アーティファクト更新
+        all_runs_df.write_csv(csv_path)
+        artifact = wandb.Artifact(name="gpu-usage", type="dataset")
+        artifact.add_file(local_path=csv_path)
+        run.log_artifact(artifact)
+    return all_runs_df
 
 
 if __name__ == "__main__":
