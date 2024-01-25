@@ -13,8 +13,8 @@ from utils import set_date
 def handler(event, context):
     # 対象とする日付を定義。今日を取得する場合はNone
     target_date = None
-    # for day in range(6, 7):
-    # target_date = datetime.date(2023, 12, day)
+    # for day in range(1, 31):
+    # target_date = datetime.date(2023, 11, day)
     target_date, processed_at = set_date(target_date=target_date)
     new_runs_df = get_new_runs(target_date=target_date, processed_at=processed_at)
     all_runs_df = update_data_src(df=new_runs_df, target_date=target_date)
