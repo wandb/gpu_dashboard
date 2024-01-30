@@ -19,8 +19,8 @@ def handler(event, context):
     new_runs_df = get_new_runs(target_date=target_date, processed_at=processed_at)
     all_runs_df = update_data_src(df=new_runs_df, target_date=target_date)
     remove_latest_tags()
-    update_companies_table(df=all_runs_df, target_date=target_date)
-    update_overall_table(df=all_runs_df, target_date=target_date)
+    companies_daily_df = update_companies_table(df=all_runs_df, target_date=target_date)
+    update_overall_table(df=companies_daily_df, target_date=target_date)
     return
 
 

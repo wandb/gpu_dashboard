@@ -1,12 +1,8 @@
 companies:
-  - wandb-japan
-  - llm-jp-eval
-
-# companies:
-#   - wandb-japan
-#     - gpu_num: 1
-#   - llm-jp-eval
-#     - gpu_num: 2
+  - company_name: wandb-japan
+    assigned_gpu_num: 2
+  - company_name: llm-jp-eval
+    assigned_gpu_num: 4
 
 path_to_dashboard:
   entity: wandb-japan

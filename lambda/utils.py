@@ -118,7 +118,7 @@ def cast(df: pl.DataFrame) -> pl.DataFrame:
     return new_df
 
 
-def set_date(target_date):
+def set_date(target_date: datetime.date) -> tuple[datetime.date, datetime.datetime]:
     """更新時の日付をsetする"""
     if target_date is None:
         target_date = datetime.date.today()

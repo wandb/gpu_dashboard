@@ -23,11 +23,13 @@ from utils import (
 # - - - - - - - - - -
 # メインの処理
 # - - - - - - - - - -
-def get_new_runs(target_date, processed_at):
+def get_new_runs(
+    target_date: datetime.date, processed_at: datetime.datetime
+) -> pl.DataFrame:
     """今日finishedになったrunとrunning状態のrunのデータを取得する"""
     df_list = []
-    for company_name in tqdm(CONFIG["companies"]):
-        daily_update_df = pl.DataFrame(fetch_runs(company_name)).pipe(
+    for company in tqdm(CONFIG["companies"]):
+        daily_update_df = pl.DataFrame(fetch_runs(company["company_name"])).pipe(
             process_runs, target_date=target_date, processed_at=processed_at
         )
         if not daily_update_df.is_empty():
@@ -39,7 +41,7 @@ def get_new_runs(target_date, processed_at):
         return pl.DataFrame()
 
 
-def update_data_src(df: pl.DataFrame, target_date) -> pl.DataFrame:
+def update_data_src(df: pl.DataFrame, target_date: datetime.date) -> pl.DataFrame:
     """今日取得したrunと過去に取得したrunをconcatしてartifactsをupdateする"""
     target_date_str = target_date.strftime("%Y-%m-%d")
     with wandb.init(
@@ -68,9 +70,9 @@ def update_data_src(df: pl.DataFrame, target_date) -> pl.DataFrame:
                 # concatして重複するrunを除外
                 all_runs_df = (
                     pl.concat((df.pipe(cast), old_runs_df.pipe(cast)))
-                    .sort("logged_at", descending=True)
+                    .sort(["logged_at"], descending=True)
                     .unique("run_path")
-                    .sort(["ended_at", "logged_at"], descending=True)
+                    .sort(["created_at", "logged_at"], descending=True)
                 )
             else:
                 all_runs_df = old_runs_df.clone()
@@ -87,86 +89,145 @@ def update_data_src(df: pl.DataFrame, target_date) -> pl.DataFrame:
 
 def remove_latest_tags() -> None:
     """プロジェクトのrunsからlatestタグを削除する"""
+    DAYS_TO_RESET = 2
     remove_project_tags(
         entity=CONFIG["path_to_dashboard"]["entity"],
         project=CONFIG["path_to_dashboard"]["project"],
         delete_tags=["latest"],
-        head=12,  # 最新の数件のみ（時間がかかるため）
+        head=(2 + len(CONFIG["companies"])) * DAYS_TO_RESET,  # 最新の数件のみ（時間がかかるため）
     )
     return
 
 
-def update_companies_table(df, target_date) -> None:
+def update_companies_table(df: pl.DataFrame, target_date: datetime.date) -> None:
     if df.is_empty():
         return
-    for company_name in tqdm(CONFIG["companies"]):
-        run_gpu_usage = df.filter(pl.col("company_name") == company_name)
-        if len(run_gpu_usage):
-            daily_gpu_duration = (
-                # 時間ごとで集計（日をまたぐときがあるため）
-                run_gpu_usage.pipe(agg_hourly_usage)
-                .with_columns(pl.col("datetime").dt.strftime("%Y-%m-%d").alias("date"))
-                # 日ごとで集計
-                .group_by(["company_name", "date"], maintain_order=True)
-                .agg(
-                    pl.col("total_gpu_hours").sum(),
-                )
+    # GPU割り当て数を追加
+    # df = df.join(pl.DataFrame(CONFIG["companies"]), on="company_name", how="left")
+    df_list = []
+    for company in tqdm(CONFIG["companies"]):
+        run_gpu_usage = df.filter(pl.col("company_name") == company["company_name"])
+        if run_gpu_usage.is_empty():
+            continue
+        daily_gpu_duration = (
+            # 時間ごとで集計（日をまたぐときがあるため）
+            run_gpu_usage.pipe(agg_hourly_usage)
+            .with_columns(pl.col("datetime").dt.strftime("%Y-%m-%d").alias("date"))
+            # 日ごとで集計
+            .group_by(["company_name", "date"], maintain_order=True)
+            .agg(
+                pl.col("total_gpu_hours").sum(),
             )
-            daily_gpu_metrics = (
-                # 日ごとで集計
-                run_gpu_usage.with_columns(
-                    pl.col("created_at").dt.strftime("%Y-%m-%d").alias("date")
-                )
-                .group_by(["company_name", "date"], maintain_order=True)
-                .agg(
-                    [
-                        pl.col("average_gpu_utilization").mean(),
-                        pl.col("max_gpu_utilization").mean(),
-                        pl.col("average_gpu_memory").mean(),
-                        pl.col("max_gpu_memory").mean(),
-                    ]
-                )
-            )
-            # 利用時間にmetricsをマージ
-            daily_gpu_usage = (
-                daily_gpu_duration.join(
-                    daily_gpu_metrics, on=["company_name", "date"], how="left"
-                )
-                .fill_null(0)
-                .pipe(back_to_utc)
-            )
-            tables = {
-                "company_run_gpu_usage": run_gpu_usage,
-                "company_daily_gpu_usage": daily_gpu_usage,
-            }
-            target_date_str = target_date.strftime("%Y-%m-%d")
-            log2wandb(
-                run_name=f"Tables_{target_date_str}",
-                tables=tables,
-                tags=[company_name, "latest"],
-            )
-    return
-
-
-def update_overall_table(df, target_date):
-    if df.is_empty():
-        return
-    # 1つのDataFrameに集約してデータ整形
-    overall_usage_df = (
-        df.with_columns(
-            pl.col("created_at").dt.strftime("%Y-%m").alias("date"),  # 月跨ぎは考慮できていない
-            (pl.col("duration_hour") * pl.col("gpu_count")).alias("gpu_hours"),
         )
-        .group_by(["date", "company_name"])
-        .agg([pl.col("gpu_hours").sum().alias("total_gpu_hours")])
-        .select(["date", "company_name", "total_gpu_hours"])
+        daily_gpu_metrics = (
+            # 日ごとで集計
+            run_gpu_usage.with_columns(
+                pl.col("created_at").dt.strftime("%Y-%m-%d").alias("date")
+            )
+            .group_by(["company_name", "date"], maintain_order=True)
+            .agg(
+                pl.col("average_gpu_utilization").mean(),
+                pl.col("max_gpu_utilization").mean(),
+                pl.col("average_gpu_memory").mean(),
+                pl.col("max_gpu_memory").mean(),
+            )
+        )
+        # 利用時間にmetricsをマージ
+        daily_gpu_usage = (
+            daily_gpu_duration.join(
+                daily_gpu_metrics, on=["company_name", "date"], how="left"
+            )
+            .join(pl.DataFrame(CONFIG["companies"]), on="company_name", how="left")
+            .with_columns(
+                pl.col("total_gpu_hours")
+                .truediv(pl.col("assigned_gpu_num").mul(24))
+                .alias("utilization_rate")
+            )
+            .pipe(back_to_utc)
+        )
+        target_date_str = target_date.strftime("%Y-%m-%d")
+        log2wandb(
+            run_name=f"Tables_{target_date_str}",
+            tables={
+                "company_daily_gpu_usage": daily_gpu_usage.fill_null(0),
+                "company_daily_gpu_usage_within_30days": daily_gpu_usage.fill_null(
+                    0
+                ).head(30),
+            },
+            tags=[company["company_name"], "latest"],
+        )
+        df_list.append(daily_gpu_usage)
+    # 各企業のdfをconcat
+    return pl.concat(df_list)
+
+
+def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
+    if df.is_empty():
+        return
+    overall_usage_df = (
+        df.group_by("company_name")
+        .agg(
+            pl.col("total_gpu_hours").sum(),
+            pl.col("average_gpu_utilization").mean(),
+            pl.col("max_gpu_utilization").mean(),
+            pl.col("average_gpu_memory").mean(),
+            pl.col("max_gpu_memory").mean(),
+        )
+        .join(pl.DataFrame(CONFIG["companies"]), on="company_name", how="left")
+        .with_columns(
+            pl.lit(
+                (
+                    (
+                        (
+                            df["date"].str.strptime(pl.Datetime, "%Y-%m-%d").max()
+                            - df["date"].str.strptime(pl.Datetime, "%Y-%m-%d").min()
+                        )
+                    ).days
+                    + 1
+                )
+            )
+            .mul(24)
+            .alias("available_hours")
+        )
+        .with_columns(
+            pl.col("total_gpu_hours")
+            .truediv(pl.col("available_hours").mul(pl.col("assigned_gpu_num")))
+            .alias("utilization_rate")
+        )
         .sort(["company_name"])
-        .sort(["date"], descending=True)
+    )
+    mothly_usage_df = (
+        df.with_columns(
+            pl.col("date")
+            .str.strptime(pl.Datetime, "%Y-%m-%d")
+            .dt.strftime("%Y-%m")
+            .alias("year-month")
+        )
+        .group_by(["company_name", "year-month"])
+        .agg(
+            pl.col("company_name").count().mul(24).alias("available_hours"),
+            pl.col("total_gpu_hours").sum(),
+            pl.col("average_gpu_utilization").mean(),
+            pl.col("max_gpu_utilization").mean(),
+            pl.col("average_gpu_memory").mean(),
+            pl.col("max_gpu_memory").mean(),
+        )
+        .join(pl.DataFrame(CONFIG["companies"]), on="company_name", how="left")
+        .with_columns(
+            pl.col("total_gpu_hours")
+            .truediv(pl.col("available_hours").mul(pl.col("assigned_gpu_num")))
+            .alias("utilization_rate")
+        )
+        .sort(["company_name"])
+        .sort(["year-month"], descending=True)
     )
     target_date_str = target_date.strftime("%Y-%m-%d")
     log2wandb(
         run_name=f"Tables_{target_date_str}",
-        tables={"overall_gpu_usage": overall_usage_df},
+        tables={
+            "overall_gpu_usage": overall_usage_df,
+            "monthly_gpu_usage": mothly_usage_df,
+        },
         tags=["overall", "latest"],
     )
     return
@@ -221,7 +282,9 @@ def fetch_runs(company_name: str) -> list[dict[str, Any]]:
     return runs_data
 
 
-def process_runs(df: pl.DataFrame, target_date, processed_at) -> pl.DataFrame:
+def process_runs(
+    df: pl.DataFrame, target_date: datetime.date, processed_at: datetime.datetime
+) -> pl.DataFrame:
     """企業ごとのrunのテーブルを作る"""
     new_df = (
         df.with_columns(
@@ -255,17 +318,18 @@ def process_runs(df: pl.DataFrame, target_date, processed_at) -> pl.DataFrame:
             .alias("duration")
         )
         .with_columns(
-            (pl.col("duration") / 60 / 60).alias("duration_hour"),
+            pl.col("duration").truediv(60**2).alias("duration_hour"),
             # 秒から時間に変更
         )
         .with_columns(
             # 終了時刻を取得
-            (
-                pl.col("created_at")
-                + pl.col("duration_hour").map_elements(
+            pl.col("created_at")
+            .add(
+                pl.col("duration_hour").map_elements(
                     lambda x: datetime.timedelta(hours=x)
                 )
-            ).alias("ended_at")
+            )
+            .alias("ended_at")
         )
         .filter(
             (pl.col("created_at").cast(pl.Date) <= target_date)
@@ -293,7 +357,7 @@ def process_runs(df: pl.DataFrame, target_date, processed_at) -> pl.DataFrame:
     return new_df
 
 
-def add_metrics(df):
+def add_metrics(df: pl.DataFrame) -> pl.DataFrame:
     """system metricsの統計量のカラムを追加する"""
     rows = []
     for run_path in df["run_path"]:
@@ -336,7 +400,7 @@ def describe_metrics(df: pl.DataFrame) -> dict[str, np.float16]:
     return statistics
 
 
-def agg_hourly_usage(df):
+def agg_hourly_usage(df: pl.DataFrame) -> pl.DataFrame:
     """企業ごとの時間ごとの使用量を計算する"""
     company_name = df["company_name"][0]  # 企業名取得
     duration_df = df.select(["created_at", "ended_at", "gpu_count", "duration_hour"])
@@ -362,7 +426,7 @@ def agg_hourly_usage(df):
     usage_per_hours = (
         pl.concat(df_list)  # runを集約
         .group_by(["datetime"], maintain_order=True)
-        .agg((pl.col("gpu_count").sum() / 60).alias("total_gpu_hours"))  # 時間の単位を変更
+        .agg(pl.col("gpu_count").sum().truediv(60).alias("total_gpu_hours"))  # 時間の単位を変更
     )
 
     # 連続した日付を持つDataFrame
@@ -381,11 +445,6 @@ def agg_hourly_usage(df):
         .fill_null(0)
         .with_columns(pl.lit(company_name).alias("company_name"))  # 企業名のカラムを追加
         .select(["company_name", "datetime", "total_gpu_hours"])
-        .sort("datetime", descending=True)
+        .sort(["datetime"], descending=True)
     )
     return company_usage
-
-
-# 日ごとの処理
-# まずは連続した日付を作る
-# そこにマージしていく
