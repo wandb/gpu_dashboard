@@ -11,8 +11,8 @@ import os
 
 from dotenv import load_dotenv
 
+del os.environ["WANDB_API_KEY"]
 load_dotenv()
-
 
 class GpuUsageStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:

@@ -1,9 +1,48 @@
+# companies:
+#   - company_name: abeja-geniac # ABEJA
+#     schedule:
+#       - start_date: "2024-02-15"
+#         assigned_gpu_num: 48
+#   - company_name: stockmark-geniac # Stockmark
+#     schedule:
+#       - start_date: "2024-02-15"
+#         assigned_gpu_num: 48
+#   - company_name: pfe-geniac # PFE
+#     schedule:
+#       - start_date: "2024-02-15"
+#         assigned_gpu_num: 50
+#   - company_name: turing-geniac # Turing
+#     schedule:
+#       - start_date: "2024-02-15"
+#         assigned_gpu_num: 4
+#       - start_date: "2024-06-15"
+#         assigned_gpu_num: 35
+#   - company_name: llm-jp-geniac # NII
+#     schedule:
+#       - start_date: "2024-02-15"
+#         assigned_gpu_num: 75
+#   - company_name: team1 # Matsuo LB No.1
+#     schedule:
+#       - start_date: "2024-04-15"
+#         assigned_gpu_num: 21
+#   - company_name: team2 # Matsuo LB No.2
+#     schedule:
+#       - start_date: "2024-04-15"
+#         assigned_gpu_num: 21
+#   - company_name: sakanaai-geniac # Sakana AI
+#     schedule:
+#       - start_date: "2024-06-15"
+#         assigned_gpu_num: 32
 companies:
   - company_name: wandb-japan
     assigned_gpu_num: 2
-  - company_name: llm-jp-eval
-    assigned_gpu_num: 4
+  # - company_name: llm-jp-eval
+    # assigned_gpu_num: 4
 
 path_to_dashboard:
-  entity: wandb-japan
+  entity: geniac-gpu
   project: gpu-dashboard
+
+# path_to_dashboard:
+#   entity: wandb-japan
+#   project: gpu-dashboard
