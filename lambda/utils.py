@@ -10,7 +10,6 @@ with open("config.yaml") as y:
     CONFIG = yaml.safe_load(y)
 
 # 日付
-PROJECT_START_DATE = datetime.date(2024, 1, 1)
 NOW_UTC = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 UPDATE_DATE_STR = (NOW_UTC + datetime.timedelta(hours=9)).strftime("%Y-%m-%d")
 

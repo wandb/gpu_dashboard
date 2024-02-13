@@ -1,5 +1,3 @@
-import datetime
-
 from func import (
     get_new_runs,
     update_data_src,
@@ -17,10 +15,10 @@ def handler(event, context):
     # target_date = datetime.date(2023, 11, day)
     target_date, processed_at = set_date(target_date=target_date)
     new_runs_df = get_new_runs(target_date=target_date, processed_at=processed_at)
-    all_runs_df = update_data_src(df=new_runs_df, target_date=target_date)
-    remove_latest_tags()
-    companies_daily_df = update_companies_table(df=all_runs_df, target_date=target_date)
-    update_overall_table(df=companies_daily_df, target_date=target_date)
+    # all_runs_df = update_data_src(df=new_runs_df, target_date=target_date)
+    # remove_latest_tags()
+    # companies_daily_df = update_companies_table(df=all_runs_df, target_date=target_date)
+    # update_overall_table(df=companies_daily_df, target_date=target_date)
     return
 
 

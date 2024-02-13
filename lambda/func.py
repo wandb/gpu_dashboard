@@ -29,9 +29,12 @@ def get_new_runs(
     """今日finishedになったrunとrunning状態のrunのデータを取得する"""
     df_list = []
     for company in tqdm(CONFIG["companies"]):
+        start_date = min(datetime.datetime.strptime(schedule["date"], "%Y-%m-%d") for schedule in company['schedule'])
+        print(start_date) # debug
         daily_update_df = pl.DataFrame(fetch_runs(company["company_name"])).pipe(
             process_runs, target_date=target_date, processed_at=processed_at
-        )
+        ).filter(pl.col("created_at")>=start_date)
+        print(daily_update_df)
         if not daily_update_df.is_empty():
             df_list.append(daily_update_df)
     if df_list:
