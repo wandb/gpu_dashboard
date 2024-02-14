@@ -41,14 +41,18 @@ companies:
     schedule:
       - date: "2024-02-01"
         assigned_gpu_num: 2
-      - date: "2024-06-01"
-        assigned_gpu_num: 2
+      - date: "2024-02-08"
+        assigned_gpu_num: 4
   # - company_name: llm-jp-eval
-  # assigned_gpu_num: 4
+  #   schedule:
+  #     - date: "2024-02-01"
+  #       assigned_gpu_num: 4
 
+# production
 path_to_dashboard:
   entity: geniac-gpu
   project: gpu-dashboard
+# local development
 # path_to_dashboard:
 #   entity: wandb-japan
 #   project: gpu-dashboard
