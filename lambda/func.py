@@ -324,6 +324,8 @@ def process_runs(
     start_date: datetime.datetime,
 ) -> pl.DataFrame:
     """企業ごとのrunのテーブルを作る"""
+    if df.is_empty():
+        return pl.DataFrame()
     new_df = (
         df.with_columns(
             # 元データはUTC時間になっている
