@@ -13,11 +13,10 @@ from utils import set_date
 
 def handler(event, context):
     # TODO
-    # eventがcronだったら今日を取得
-    # httpでstart_dateとend_dateがあれば連続で更新
-    # 対象とする日付を定義。今日を取得する場合はNone
-    # for day in range(1, 15):
-    # target_date = datetime.date(2024, 1, day)
+    # - ステージング環境作成
+    # - 簡易テスト（コード内に追加）
+    # - 定期実行と手動データ取得
+    # - リファクタ（日付をdatetime.datetimeに統合）
     if True:
         target_date = None
         target_date, processed_at = set_date(target_date=target_date)

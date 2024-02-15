@@ -178,7 +178,7 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
         return
     # GPU割り当て数と利用可能な時間を取得
     gpu_schedule_df = get_gpu_schedule(config=CONFIG, target_date=target_date)
-    overall_gpu_df = gpu_schedule_df.groupby(["company_name"]).agg(
+    overall_gpu_df = gpu_schedule_df.group_by(["company_name"]).agg(
         pl.col("assigned_gpu_num").sum().mul(24).alias("assigned_gpu_hours")
     )
     # 利用実績を集計
