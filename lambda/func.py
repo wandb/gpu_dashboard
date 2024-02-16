@@ -18,7 +18,9 @@ from utils import (
     NOW_UTC,
     QUERY,
 )
-
+GPU_PER_NODE = 8
+HOUR_PER_DAY = 24
+RATIO_TO_PERCENT = 100
 
 # - - - - - - - - - -
 # メインの処理
@@ -150,7 +152,9 @@ def update_companies_table(df: pl.DataFrame, target_date: datetime.date) -> None
             )  # 割り当てGPU数をマージ
             .with_columns(
                 pl.col("total_gpu_hours")
-                .truediv(pl.col("assigned_gpu_num").mul(24)).mul(100)
+                .truediv(
+                    pl.col("assigned_gpu_node").mul(GPU_PER_NODE).mul(HOUR_PER_DAY)
+                ).mul(RATIO_TO_PERCENT)
                 .alias("utilization_rate")
             )
             .filter(pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d") >= start_date)
@@ -179,7 +183,7 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
     # GPU割り当て数と利用可能な時間を取得
     gpu_schedule_df = get_gpu_schedule(config=CONFIG, target_date=target_date)
     overall_gpu_df = gpu_schedule_df.group_by(["company_name"]).agg(
-        pl.col("assigned_gpu_num").sum().mul(24).alias("assigned_gpu_hours")
+        pl.col("assigned_gpu_node").sum().mul(GPU_PER_NODE).mul(HOUR_PER_DAY).alias("assigned_gpu_hours")
     )
     # 利用実績を集計
     grouped_df = df.group_by("company_name").agg(
@@ -194,7 +198,7 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
         grouped_df, on=["company_name"], how="left"
     ).with_columns(
         pl.col("total_gpu_hours")
-        .truediv(pl.col("assigned_gpu_hours")).mul(100)
+        .truediv(pl.col("assigned_gpu_hours")).mul(RATIO_TO_PERCENT)
         .alias("utilization_rate")
     )
     mothly_usage_df = (
@@ -212,11 +216,11 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
             pl.col("max_gpu_utilization").mean(),
             pl.col("average_gpu_memory").mean(),
             pl.col("max_gpu_memory").mean(),
-            pl.col("assigned_gpu_num").sum().mul(24).alias("assigned_gpu_hours"),
+            pl.col("assigned_gpu_node").sum().mul(GPU_PER_NODE).mul(HOUR_PER_DAY).alias("assigned_gpu_hours"),
         )
         .with_columns(
             pl.col("total_gpu_hours")
-            .truediv(pl.col("assigned_gpu_hours")).mul(100)
+            .truediv(pl.col("assigned_gpu_hours")).mul(RATIO_TO_PERCENT)
             .alias("utilization_rate")
         )
         .sort(["company_name"])
@@ -254,7 +258,7 @@ def get_gpu_schedule(
         )
         gpu_df = (
             date_df.join(pl.DataFrame(company["schedule"]), on="date", how="left")
-            .with_columns(pl.col("assigned_gpu_num").forward_fill(), pl.lit(company["company_name"]).alias("company_name"))
+            .with_columns(pl.col("assigned_gpu_node").forward_fill(), pl.lit(company["company_name"]).alias("company_name"))
         )
         df_list.append(gpu_df)
     new_df = pl.concat(df_list)
