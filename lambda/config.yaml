@@ -17,7 +17,7 @@ companies:
         assigned_gpu_node: 4
       - date: "2024-06-15"
         assigned_gpu_node: 35
-  - company_name: llm-jp-geniac # NII
+  - company_name: nii-geniac # NII
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 75

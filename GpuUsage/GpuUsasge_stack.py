@@ -45,7 +45,7 @@ class GpuUsageStack(Stack):
                 "WANDB_DIR": "/tmp",
                 "WANDB_CACHE_DIR": "/tmp",
             },
-            memory_size=3000,
+            memory_size=10240,
         )
         # 3. cron configuration
         rule = events.Rule(
