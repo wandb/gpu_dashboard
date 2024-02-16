@@ -150,7 +150,7 @@ def update_companies_table(df: pl.DataFrame, target_date: datetime.date) -> None
             )  # 割り当てGPU数をマージ
             .with_columns(
                 pl.col("total_gpu_hours")
-                .truediv(pl.col("assigned_gpu_num").mul(24))
+                .truediv(pl.col("assigned_gpu_num").mul(24)).mul(100)
                 .alias("utilization_rate")
             )
             .filter(pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d") >= start_date)
@@ -194,7 +194,7 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
         grouped_df, on=["company_name"], how="left"
     ).with_columns(
         pl.col("total_gpu_hours")
-        .truediv(pl.col("assigned_gpu_hours"))
+        .truediv(pl.col("assigned_gpu_hours")).mul(100)
         .alias("utilization_rate")
     )
     mothly_usage_df = (
@@ -216,7 +216,7 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
         )
         .with_columns(
             pl.col("total_gpu_hours")
-            .truediv(pl.col("assigned_gpu_hours"))
+            .truediv(pl.col("assigned_gpu_hours")).mul(100)
             .alias("utilization_rate")
         )
         .sort(["company_name"])
@@ -254,8 +254,7 @@ def get_gpu_schedule(
         )
         gpu_df = (
             date_df.join(pl.DataFrame(company["schedule"]), on="date", how="left")
-            .with_columns(pl.col("assigned_gpu_num").forward_fill())
-            .with_columns(pl.lit(company["company_name"]).alias("company_name"))
+            .with_columns(pl.col("assigned_gpu_num").forward_fill(), pl.lit(company["company_name"]).alias("company_name"))
         )
         df_list.append(gpu_df)
     new_df = pl.concat(df_list)

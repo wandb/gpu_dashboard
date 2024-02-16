@@ -16,6 +16,7 @@ def handler(event, context):
     # - ステージング環境作成
     # - 簡易テスト（コード内に追加）
     # - 定期実行と手動データ取得
+    # - データがない日に対応できているか
     # - リファクタ（日付をdatetime.datetimeに統合）
     if True:
         target_date = None
