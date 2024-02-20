@@ -1,4 +1,4 @@
-# import os
+import os
 import datetime
 
 from func import (
@@ -15,11 +15,15 @@ def handler(event, context):
     # TODO
     # - ステージング環境作成
     # - 簡易テスト（コード内に追加）
-    # - 定期実行と手動データ取得
+    # - 定期実行と手動データ取得    
     # - データがない日に対応できているか
     # - リファクタ（日付をdatetime.datetimeに統合）
+    print(event)
+    print(context)
     if True:
         target_date = None
+    # for day in range(15, 20):
+    #     target_date = datetime.date(2024, 2, day)
         target_date, processed_at = set_date(target_date=target_date)
         new_runs_df = get_new_runs(target_date=target_date, processed_at=processed_at)
         all_runs_df = update_artifacts(df=new_runs_df, target_date=target_date)
