@@ -18,9 +18,11 @@ from utils import (
     NOW_UTC,
     QUERY,
 )
+
 GPU_PER_NODE = 8
 HOUR_PER_DAY = 24
 RATIO_TO_PERCENT = 100
+
 
 # - - - - - - - - - -
 # メインの処理
@@ -154,7 +156,8 @@ def update_companies_table(df: pl.DataFrame, target_date: datetime.date) -> None
                 pl.col("total_gpu_hours")
                 .truediv(
                     pl.col("assigned_gpu_node").mul(GPU_PER_NODE).mul(HOUR_PER_DAY)
-                ).mul(RATIO_TO_PERCENT)
+                )
+                .mul(RATIO_TO_PERCENT)
                 .alias("utilization_rate")
             )
             .filter(pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d") >= start_date)
@@ -183,7 +186,11 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
     # GPU割り当て数と利用可能な時間を取得
     gpu_schedule_df = get_gpu_schedule(config=CONFIG, target_date=target_date)
     overall_gpu_df = gpu_schedule_df.group_by(["company_name"]).agg(
-        pl.col("assigned_gpu_node").sum().mul(GPU_PER_NODE).mul(HOUR_PER_DAY).alias("assigned_gpu_hours")
+        pl.col("assigned_gpu_node")
+        .sum()
+        .mul(GPU_PER_NODE)
+        .mul(HOUR_PER_DAY)
+        .alias("assigned_gpu_hours")
     )
     # 利用実績を集計
     grouped_df = df.group_by("company_name").agg(
@@ -198,7 +205,8 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
         grouped_df, on=["company_name"], how="left"
     ).with_columns(
         pl.col("total_gpu_hours")
-        .truediv(pl.col("assigned_gpu_hours")).mul(RATIO_TO_PERCENT)
+        .truediv(pl.col("assigned_gpu_hours"))
+        .mul(RATIO_TO_PERCENT)
         .alias("utilization_rate")
     )
     mothly_usage_df = (
@@ -216,11 +224,16 @@ def update_overall_table(df: pl.DataFrame, target_date: datetime.date) -> None:
             pl.col("max_gpu_utilization").mean(),
             pl.col("average_gpu_memory").mean(),
             pl.col("max_gpu_memory").mean(),
-            pl.col("assigned_gpu_node").sum().mul(GPU_PER_NODE).mul(HOUR_PER_DAY).alias("assigned_gpu_hours"),
+            pl.col("assigned_gpu_node")
+            .sum()
+            .mul(GPU_PER_NODE)
+            .mul(HOUR_PER_DAY)
+            .alias("assigned_gpu_hours"),
         )
         .with_columns(
             pl.col("total_gpu_hours")
-            .truediv(pl.col("assigned_gpu_hours")).mul(RATIO_TO_PERCENT)
+            .truediv(pl.col("assigned_gpu_hours"))
+            .mul(RATIO_TO_PERCENT)
             .alias("utilization_rate")
         )
         .sort(["company_name"])
@@ -256,9 +269,11 @@ def get_gpu_schedule(
             .alias("date")
             .alias("date")
         )
-        gpu_df = (
-            date_df.join(pl.DataFrame(company["schedule"]), on="date", how="left")
-            .with_columns(pl.col("assigned_gpu_node").forward_fill(), pl.lit(company["company_name"]).alias("company_name"))
+        gpu_df = date_df.join(
+            pl.DataFrame(company["schedule"]), on="date", how="left"
+        ).with_columns(
+            pl.col("assigned_gpu_node").forward_fill(),
+            pl.lit(company["company_name"]).alias("company_name"),
         )
         df_list.append(gpu_df)
     new_df = pl.concat(df_list)
@@ -298,10 +313,16 @@ def fetch_runs(company_name: str) -> list[dict[str, Any]]:
                 continue
 
             # GPU使用量計算に使うデータ
-            duration = run["computeSeconds"]
             runInfo = run["runInfo"]
             gpu_name = runInfo["gpu"]
             gpuCount = runInfo["gpuCount"]
+            createdAt = run["createdAt"]
+            updatedAt = run["updatedAt"]
+            duration = (
+                datetime.datetime.fromisoformat(updatedAt)
+                - datetime.datetime.fromisoformat(createdAt)
+            ).seconds
+            # duration = run["computeSeconds"]
 
             # データ追加
             runs_data.append(
@@ -309,7 +330,8 @@ def fetch_runs(company_name: str) -> list[dict[str, Any]]:
                     "company_name": company_name,
                     "project": project_name,
                     "run_id": run["name"],
-                    "created_at": run["createdAt"],
+                    "created_at": createdAt,
+                    "updated_at": updatedAt,
                     "username": run["user"]["username"],
                     "gpu_name": gpu_name,
                     "gpu_count": gpuCount,
@@ -355,13 +377,14 @@ def process_runs(
             )
             .alias("elapsed_second"),
         )
-        .with_columns(
-            # state=runningの場合、取得時刻までの経過時間を計算する
-            pl.when(pl.col("state") == "running")
-            .then("elapsed_second")
-            .otherwise("duration")
-            .alias("duration")
-        )
+        ### updatedAtで終了時刻を取得したのでコメントアウト ###
+        # .with_columns(
+        #     # state=runningの場合、取得時刻までの経過時間を計算する
+        #     pl.when(pl.col("state") == "running")
+        #     .then("elapsed_second")
+        #     .otherwise("duration")
+        #     .alias("duration")
+        # )
         .with_columns(
             pl.col("duration").truediv(60**2).alias("duration_hour"),
             # 秒から時間に変更

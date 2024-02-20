@@ -21,14 +21,14 @@ companies:
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 75
-  - company_name: team1 # Matsuo LB No.1
-    schedule:
-      - date: "2024-04-15"
-        assigned_gpu_node: 21
-  - company_name: team2 # Matsuo LB No.2
-    schedule:
-      - date: "2024-04-15"
-        assigned_gpu_node: 21
+  # - company_name: team1 # Matsuo LB No.1
+  #   schedule:
+  #     - date: "2024-04-15"
+  #       assigned_gpu_node: 21
+  # - company_name: team2 # Matsuo LB No.2
+  #   schedule:
+  #     - date: "2024-04-15"
+  #       assigned_gpu_node: 21
   - company_name: sakanaai-geniac # Sakana AI
     schedule:
       - date: "2024-06-15"
