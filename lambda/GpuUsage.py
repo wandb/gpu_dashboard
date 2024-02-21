@@ -1,3 +1,10 @@
+"""
+TODO
+- ステージング環境作成
+- 簡易テスト（コード内に追加）
+- データがない日に対応できているか
+"""
+
 import os
 import datetime
 import json
@@ -11,44 +18,37 @@ from func import (
     update_overall_table,
 )
 
-# from utils import NOW_UTC
-
-
 def handler(event: dict[str, str], context: object) -> None:
-    # TODO
-    # - ステージング環境作成
-    # - 簡易テスト（コード内に追加）
-    # - データがない日に対応できているか
-    # - リファクタ（日付をdatetime.datetimeに統合）
+    # set WANDB API KEY
     WANDB_API_KEY = event.get("WANDB_API_KEY")
     if WANDB_API_KEY is not None:
         del os.environ["WANDB_API_KEY"]
         os.environ["WANDB_API_KEY"] = WANDB_API_KEY
+    # set target date
     target_date_str = event.get("target_date")
     if target_date_str is None:
         target_date = datetime.date.today()
-        # processed_at = NOW_UTC + datetime.timedelta(hours=9)
     else:
         try:
             target_date = datetime.datetime.strptime(target_date_str, "%Y-%m-%d").date()
-            # processed_at = datetime.datetime.combine(
-            #     target_date + datetime.timedelta(days=1), datetime.time()
-            # )
         except:
             return {"statusCode": 200, "body": json.dumps("Invalid date format.")}
-    processed_at = datetime.datetime.combine(
-        target_date + datetime.timedelta(days=1), datetime.time()
-    )
     print(f"Processing {target_date}")
-    new_runs_df = get_new_runs(target_date=target_date, processed_at=processed_at)
+    # update tables
+    new_runs_df = get_new_runs(target_date=target_date)
     all_runs_df = update_artifacts(df=new_runs_df, target_date=target_date)
-    remove_latest_tags()
-    companies_daily_df = update_companies_table(df=all_runs_df, target_date=target_date)
-    update_overall_table(df=companies_daily_df, target_date=target_date)
-    return {"statusCode": 200, "body": json.dumps("Succeeded.")}
+    # remove_latest_tags()
+    # companies_daily_df = update_companies_table(df=all_runs_df, target_date=target_date)
+    # update_overall_table(df=companies_daily_df, target_date=target_date)
+    # return {"statusCode": 200, "body": json.dumps("Succeeded.")}
 
 
 if __name__ == "__main__":
-    event = {"target_date": sys.argv[1], "WANDB_API_KEY": sys.argv[2]}
-    # event = {}
+    if len(sys.argv)==2:
+        event = {"WANDB_API_KEY": sys.argv[1]}
+    elif len(sys.argv)==3:
+        event = {"WANDB_API_KEY": sys.argv[1], "target_date": sys.argv[2]}
+    else:
+        print("WANDB API KEY not provided.")
+        exit()
     handler(event=event, context=None)

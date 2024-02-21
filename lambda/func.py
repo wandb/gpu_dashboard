@@ -28,7 +28,7 @@ RATIO_TO_PERCENT = 100
 # メインの処理
 # - - - - - - - - - -
 def get_new_runs(
-    target_date: datetime.date, processed_at: datetime.datetime
+    target_date: datetime.date, 
 ) -> pl.DataFrame:
     """今日finishedになったrunとrunning状態のrunのデータを取得する"""
     df_list = []
@@ -37,7 +37,6 @@ def get_new_runs(
         daily_update_df = pl.DataFrame(fetch_runs(company["company_name"])).pipe(
             process_runs,
             target_date=target_date,
-            processed_at=processed_at,
             start_date=start_date,
         )
         if not daily_update_df.is_empty():
@@ -65,13 +64,12 @@ def update_artifacts(df: pl.DataFrame, target_date: datetime.date) -> pl.DataFra
             old_runs_df = pl.from_pandas(
                 pd.read_csv(
                     csv_path,
-                    parse_dates=["created_at", "ended_at", "processed_at", "logged_at"],
+                    parse_dates=["created_at", "ended_at", "logged_at"],
                     date_format="ISO8601",
                 )
             ).with_columns(
                 pl.col("created_at").cast(pl.Datetime("us")),
                 pl.col("ended_at").cast(pl.Datetime("us")),
-                pl.col("processed_at").cast(pl.Datetime("us")),
                 pl.col("logged_at").cast(pl.Datetime("us")),
             )
             if not df.is_empty():
@@ -345,7 +343,6 @@ def fetch_runs(company_name: str) -> list[dict[str, Any]]:
 def process_runs(
     df: pl.DataFrame,
     target_date: datetime.date,
-    processed_at: datetime.datetime,
     start_date: datetime.datetime,
 ) -> pl.DataFrame:
     """企業ごとのrunのテーブルを作る"""
@@ -357,9 +354,6 @@ def process_runs(
             pl.col("created_at")
             .str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S")
             .map_elements(lambda x: x + datetime.timedelta(hours=9)),
-            pl.lit(processed_at).alias(
-                "processed_at"
-            ),  # 経過時間取得のために一時的に作成
             pl.lit(NOW_UTC + datetime.timedelta(hours=9)).alias("logged_at"),
         )
         .with_columns(
@@ -371,20 +365,7 @@ def process_runs(
                 separator="/",
             ).alias("run_path"),
             # 現在時刻までの経過時間
-            pl.struct(["created_at", "processed_at"])
-            .map_elements(
-                lambda x: (x["processed_at"] - x["created_at"]).total_seconds()
-            )
-            .alias("elapsed_second"),
         )
-        ### updatedAtで終了時刻を取得したのでコメントアウト ###
-        # .with_columns(
-        #     # state=runningの場合、取得時刻までの経過時間を計算する
-        #     pl.when(pl.col("state") == "running")
-        #     .then("elapsed_second")
-        #     .otherwise("duration")
-        #     .alias("duration")
-        # )
         .with_columns(
             pl.col("duration").truediv(60**2).alias("duration_hour"),
             # 秒から時間に変更
@@ -416,7 +397,6 @@ def process_runs(
                 "username",
                 "created_at",
                 "ended_at",
-                "processed_at",
                 "logged_at",
                 "state",
                 "gpu_name",

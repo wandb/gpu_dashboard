@@ -34,7 +34,7 @@ companies:
       - date: "2024-06-15"
         assigned_gpu_node: 32
 
-### production ### 
+### Production environment ### 
 path_to_dashboard:
   entity: geniac-gpu
   project: gpu-dashboard

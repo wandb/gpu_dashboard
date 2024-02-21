@@ -52,8 +52,8 @@ class GpuUsageStack(Stack):
             self,
             "Rule",
             schedule=events.Schedule.cron(
-                minute="5",  # 確実に日をまたぐように5分に設定
-                hour="15",  # 時差があるのでマイナス9時間にすること（24時の場合は15時に設定）
+                minute="0",  # 100%にならないかもしれないので0分に設定
+                hour="15",  # 時差があるのでマイナス9時間にする（24時の場合は15時に設定）
                 day="*",
                 month="*",
                 year="*",
