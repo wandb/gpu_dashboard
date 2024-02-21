@@ -44,7 +44,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!) {
 
 # 関数
 def back_to_utc(df: pl.DataFrame) -> pl.DataFrame:
-    """UI上で日本時間になるようにするためUTC時間に戻す"""  # TODO ダサいからリファクタ
+    """UI上で日本時間になるようにするためUTC時間に戻す"""
     datetime_cols = ["created_at", "ended_at", "logged_at", "processed_at"]
     new_df = df.clone()
     for col in datetime_cols:

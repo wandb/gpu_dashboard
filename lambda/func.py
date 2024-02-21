@@ -22,7 +22,7 @@ from utils import (
 GPU_PER_NODE = 8
 HOUR_PER_DAY = 24
 RATIO_TO_PERCENT = 100
-
+MARK = "test"
 
 # - - - - - - - - - -
 # ヘルパー関数
@@ -359,7 +359,7 @@ def remove_latest_tags() -> None:
     remove_project_tags(
         entity=CONFIG["path_to_dashboard"]["entity"],
         project=CONFIG["path_to_dashboard"]["project"],
-        delete_tags=["latest"],
+        delete_tags=[MARK],
         head=(2 + len(CONFIG["companies"]))
         * DAYS_TO_RESET,  # 最新の数件のみ（時間がかかるため）
     )
@@ -433,7 +433,7 @@ def update_companies_table(df: pl.DataFrame, target_date: dt.date) -> None:
                     0
                 ).head(30),
             },
-            tags=[company["company_name"], "test"],
+            tags=[company["company_name"], MARK],
         )
         df_list.append(daily_gpu_usage)
     # 各企業のdfをconcat
@@ -507,6 +507,6 @@ def update_overall_table(df: pl.DataFrame, target_date: dt.date) -> None:
             "overall_gpu_usage": overall_usage_df,
             "monthly_gpu_usage": mothly_usage_df,
         },
-        tags=["overall", "test"],
+        tags=["overall", MARK],
     )
     return
