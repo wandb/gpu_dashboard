@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 
 import polars as pl
 import wandb
@@ -10,8 +10,8 @@ with open("config.yaml") as y:
     CONFIG = yaml.safe_load(y)
 
 # 日付
-NOW_UTC = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
-UPDATE_DATE_STR = (NOW_UTC + datetime.timedelta(hours=9)).strftime("%Y-%m-%d")
+NOW_UTC = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+UPDATE_DATE_STR = (NOW_UTC + dt.timedelta(hours=9)).strftime("%Y-%m-%d")
 
 # gqlのクエリ
 QUERY = """\
@@ -50,7 +50,7 @@ def back_to_utc(df: pl.DataFrame) -> pl.DataFrame:
     for col in datetime_cols:
         try:
             new_df = new_df.with_columns(
-                pl.col(col).map_elements(lambda x: x + datetime.timedelta(hours=-9)),
+                pl.col(col).map_elements(lambda x: x + dt.timedelta(hours=-9)),
             )
         except:
             pass
@@ -117,13 +117,13 @@ def cast(df: pl.DataFrame) -> pl.DataFrame:
     return new_df
 
 
-def set_date(target_date: datetime.date) -> tuple[datetime.date, datetime.datetime]:
+def set_date(target_date: dt.date) -> tuple[dt.date, dt.datetime]:
     """更新時の日付をsetする"""
     if target_date is None:
-        target_date = datetime.date.today()
-        processed_at = NOW_UTC + datetime.timedelta(hours=9)
+        target_date = dt.date.today()
+        processed_at = NOW_UTC + dt.timedelta(hours=9)
     else:
-        processed_at = datetime.datetime.combine(
-            target_date + datetime.timedelta(days=1), datetime.time()
+        processed_at = dt.datetime.combine(
+            target_date + dt.timedelta(days=1), dt.time()
         )
     return target_date, processed_at
