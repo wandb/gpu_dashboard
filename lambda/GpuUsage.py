@@ -33,7 +33,7 @@ def handler(event: dict[str, str], context: object) -> None:
             target_date = dt.datetime.strptime(target_date_str, "%Y-%m-%d").date()
         except:
             return {"statusCode": 200, "body": json.dumps("Invalid date format.")}
-    print(f"Processing {target_date}")
+    print(f"Processing {target_date} ...")
     ### update tables
     new_runs_df = get_new_runs(target_date=target_date)
     all_runs_df = update_artifacts(df=new_runs_df, target_date=target_date)
