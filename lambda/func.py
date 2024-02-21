@@ -319,9 +319,9 @@ def fetch_runs(company_name: str) -> list[dict[str, Any]]:
             createdAt = run["createdAt"]
             updatedAt = run["updatedAt"]
             duration = (
-                datetime.datetime.fromisoformat(updatedAt)
-                - datetime.datetime.fromisoformat(createdAt)
-            ).seconds
+                datetime.datetime.fromisoformat(updatedAt).timestamp()
+                - datetime.datetime.fromisoformat(createdAt).timestamp()
+            ) # すべて秒数にしてから引き算
             # duration = run["computeSeconds"]
 
             # データ追加
@@ -400,8 +400,11 @@ def process_runs(
             .alias("ended_at")
         )
         .filter(
+            # GPU使用開始後のrun
             (pl.col("created_at") >= start_date)
+            # ターゲット日より前に作られたrun
             & (pl.col("created_at").cast(pl.Date) <= target_date)
+            # 今日終了したrun
             & (pl.col("ended_at").cast(pl.Date) == target_date)
         )
         .select(

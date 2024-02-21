@@ -1,6 +1,7 @@
 import os
 import datetime
 import json
+import sys
 
 from func import (
     get_new_runs,
@@ -9,7 +10,8 @@ from func import (
     update_companies_table,
     update_overall_table,
 )
-from utils import NOW_UTC
+
+# from utils import NOW_UTC
 
 
 def handler(event: dict[str, str], context: object) -> None:
@@ -18,19 +20,25 @@ def handler(event: dict[str, str], context: object) -> None:
     # - 簡易テスト（コード内に追加）
     # - データがない日に対応できているか
     # - リファクタ（日付をdatetime.datetimeに統合）
+    WANDB_API_KEY = event.get("WANDB_API_KEY")
+    if WANDB_API_KEY is not None:
+        del os.environ["WANDB_API_KEY"]
+        os.environ["WANDB_API_KEY"] = WANDB_API_KEY
     target_date_str = event.get("target_date")
     if target_date_str is None:
         target_date = datetime.date.today()
-        processed_at = NOW_UTC + datetime.timedelta(hours=9)
+        # processed_at = NOW_UTC + datetime.timedelta(hours=9)
     else:
         try:
             target_date = datetime.datetime.strptime(target_date_str, "%Y-%m-%d").date()
-            processed_at = datetime.datetime.combine(
-                target_date + datetime.timedelta(days=1), datetime.time()
-            )
+            # processed_at = datetime.datetime.combine(
+            #     target_date + datetime.timedelta(days=1), datetime.time()
+            # )
         except:
             return {"statusCode": 200, "body": json.dumps("Invalid date format.")}
-    # target_date, processed_at = set_date(target_date=target_date)
+    processed_at = datetime.datetime.combine(
+        target_date + datetime.timedelta(days=1), datetime.time()
+    )
     print(f"Processing {target_date}")
     new_runs_df = get_new_runs(target_date=target_date, processed_at=processed_at)
     all_runs_df = update_artifacts(df=new_runs_df, target_date=target_date)
@@ -41,4 +49,6 @@ def handler(event: dict[str, str], context: object) -> None:
 
 
 if __name__ == "__main__":
-    handler(event=None, context=None)
+    event = {"target_date": sys.argv[1], "WANDB_API_KEY": sys.argv[2]}
+    # event = {}
+    handler(event=event, context=None)
