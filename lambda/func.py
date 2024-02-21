@@ -24,12 +24,11 @@ HOUR_PER_DAY = 24
 RATIO_TO_PERCENT = 100
 MARK = "test"
 
+
 # - - - - - - - - - -
 # ヘルパー関数
 # - - - - - - - - - -
-def get_gpu_schedule(
-    config: dict[str, Any], target_date: dt.date
-) -> pl.DataFrame:
+def get_gpu_schedule(config: dict[str, Any], target_date: dt.date) -> pl.DataFrame:
     """日次のGPU割り当て数を取得する"""
     df_list = []
     for company in config["companies"]:
@@ -148,19 +147,12 @@ def process_runs(
         .with_columns(
             # 終了時刻を取得
             pl.col("created_at")
-            .add(
-                pl.col("duration_hour").map_elements(
-                    lambda x: dt.timedelta(hours=x)
-                )
-            )
+            .add(pl.col("duration_hour").map_elements(lambda x: dt.timedelta(hours=x)))
             .alias("ended_at")
         )
         .filter(
             # GPU使用開始後のrun
-            (
-                pl.col("created_at")
-                >= dt.datetime.combine(start_date, dt.time())
-            )
+            (pl.col("created_at") >= dt.datetime.combine(start_date, dt.time()))
             # ターゲット日より前に作られたrun
             & (pl.col("created_at").cast(pl.Date) <= target_date)
             # 今日終了したrun

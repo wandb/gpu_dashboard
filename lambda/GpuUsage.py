@@ -18,6 +18,7 @@ from func import (
     update_overall_table,
 )
 
+
 def handler(event: dict[str, str], context: object) -> None:
     ### set WANDB API KEY
     WANDB_API_KEY = event.get("WANDB_API_KEY")
@@ -44,9 +45,9 @@ def handler(event: dict[str, str], context: object) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv)==2:
+    if len(sys.argv) == 2:
         event = {"WANDB_API_KEY": sys.argv[1]}
-    elif len(sys.argv)==3:
+    elif len(sys.argv) == 3:
         event = {"WANDB_API_KEY": sys.argv[1], "target_date": sys.argv[2]}
     else:
         print("WANDB API KEY not provided.")
