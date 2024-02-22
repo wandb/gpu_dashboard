@@ -43,7 +43,6 @@ def handler(event: dict[str, str], context: object) -> None:
         print("No runs detected.")
         return pl.DataFrame()
     new_runs_df = pl.concat(df_list)
-    # return new_df
     all_runs_df = update_artifacts(new_runs_df=new_runs_df, target_date=target_date, config=CONFIG)
     return all_runs_df
 
