@@ -60,9 +60,6 @@ def fetch_runs(company_name: str, target_date: dt.date = None) -> list[RunInfo]:
 
     runs_info = []
     for project_name in project_names:
-        # stockmarkの特別対応
-        if (company_name=="stockmark-geniac") & (project_name=="gpu-monitoring"):
-            continue
         results = api.client.execute(
             gpu_info_query, {"project": project_name, "entity": company_name}
         )

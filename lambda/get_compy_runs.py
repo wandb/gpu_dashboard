@@ -17,6 +17,7 @@ target_date = dt.date(2024, 2, 21)
 def get_company_runs_df(company_name: str, target_date: dt.date, config):
     """企業ごとのrunのデータを取得する"""
     # get metadata of runs
+    print(company_name)
     runs_info: list[RunInfo] = fetch_runs(
         company_name=company_name, target_date=target_date
     )
