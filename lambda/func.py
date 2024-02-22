@@ -39,7 +39,6 @@ def get_gpu_schedule(config: dict[str, Any], target_date: dt.date) -> pl.DataFra
             )
             .dt.strftime("%Y-%m-%d")
             .alias("date")
-            .alias("date")
         )
         gpu_df = date_df.join(
             pl.DataFrame(company["schedule"]), on="date", how="left"
@@ -88,13 +87,9 @@ def fetch_runs(company_name: str) -> list[dict[str, Any]]:
             runInfo = run["runInfo"]
             gpu_name = runInfo["gpu"]
             gpuCount = runInfo["gpuCount"]
-            createdAt = run["createdAt"]
-            updatedAt = run["updatedAt"]
-            duration = (
-                dt.datetime.fromisoformat(updatedAt).timestamp()
-                - dt.datetime.fromisoformat(createdAt).timestamp()
-            )  # すべて秒数にしてから引き算
-            # duration = run["computeSeconds"]
+            createdAt = dt.datetime.fromisoformat(run["createdAt"])
+            updatedAt = dt.datetime.fromisoformat(run["updatedAt"])
+            duration = (updatedAt).timestamp() - createdAt.timestamp()
 
             # データ追加
             runs_data.append(
@@ -184,7 +179,7 @@ def add_metrics(df: pl.DataFrame) -> pl.DataFrame:
     rows = []
     for run_path in df["run_path"]:
         sys_metrics_df = sys_metrics(run_path=run_path)
-        statistics = describe_metrics(df=sys_metrics_df)
+        statistics = extract_metrics(df=sys_metrics_df)
         statistics["run_path"] = run_path
         rows.append(statistics)
     new_df = df.join(pl.DataFrame(rows), on="run_path", how="left")
@@ -199,26 +194,19 @@ def sys_metrics(run_path: str) -> pl.DataFrame:
     return df
 
 
-def describe_metrics(df: pl.DataFrame) -> dict[str, np.float16]:
-    """gpu utilizationの統計量を計算する"""
+def extract_metrics(df: pl.DataFrame) -> dict[str, np.ndarray]:
+    """gpu utilizationをarrayにする"""
     target = {"gpu_utilization": "gpu", "gpu_memory": "memory"}
     statistics = {}
     for k, v in target.items():
-        try:
-            array = (
-                df.select(pl.col(f"^system\.gpu\..*\.{v}$"))
-                .drop_nulls()
-                .to_numpy()
-                .ravel()
-            )
-            cleaned_array = array[~np.isnan(array)]
-            avg_ = np.average(cleaned_array)
-            max_ = np.max(cleaned_array)
-        except:
-            avg_, max_ = None, None
-        finally:
-            statistics[f"average_{k}"] = avg_
-            statistics[f"max_{k}"] = max_
+        array = (
+            df.select(pl.col(f"^system\.gpu\..*\.{v}$"))
+            # .drop_nulls()
+            .to_numpy().ravel()
+        )
+        # cleaned_array = array[~np.isnan(array)]
+        # statistics[k] = cleaned_array
+        statistics[k] = array
     return statistics
 
 
@@ -279,17 +267,14 @@ def agg_hourly_usage(df: pl.DataFrame) -> pl.DataFrame:
 # - - - - - - - - - -
 # メインの処理
 # - - - - - - - - - -
-def get_new_runs(
-    target_date: dt.date,
-) -> pl.DataFrame:
+def get_new_runs(target_date: dt.date) -> pl.DataFrame:
     """今日finishedになったrunとrunning状態のrunのデータを取得する"""
     df_list = []
     for company in tqdm(CONFIG["companies"]):
-        start_date: dt.date = get_start_date(company_cfg=company)
         daily_update_df = pl.DataFrame(fetch_runs(company["company_name"])).pipe(
             process_runs,
             target_date=target_date,
-            start_date=start_date,
+            start_date=get_start_date(company_cfg=company),
         )
         if not daily_update_df.is_empty():
             df_list.append(daily_update_df)

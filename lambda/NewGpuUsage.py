@@ -1,22 +1,13 @@
-"""
-TODO
-- ステージング環境作成
-- 簡易テスト（コード内に追加）
-- データがない日に対応できているか
-"""
-
 import os
+import sys
 import datetime as dt
 import json
-import sys
 
-from func import (
-    get_new_runs,
-    update_artifacts,
-    remove_latest_tags,
-    update_companies_table,
-    update_overall_table,
-)
+import polars as pl
+
+from agg_df import agg_company_daily
+from get_compy_runs import get_company_runs_df
+from utils import CONFIG
 
 
 def handler(event: dict[str, str], context: object) -> None:
@@ -37,15 +28,19 @@ def handler(event: dict[str, str], context: object) -> None:
             return {"statusCode": 200, "body": json.dumps("Invalid date format.")}
     print(f"Processing {target_date} ...")
 
-    ### update tables
-    ## get runs data
-    new_runs_df = get_new_runs(target_date=target_date)
-    all_runs_df = update_artifacts(df=new_runs_df, target_date=target_date)
-    remove_latest_tags()
-    ## aggregate
-    companies_daily_df = update_companies_table(df=all_runs_df, target_date=target_date)
-    update_overall_table(df=companies_daily_df, target_date=target_date)
-    return {"statusCode": 200, "body": json.dumps("Succeeded.")}
+    ### create company table
+    df_list = []
+    for company in CONFIG["companies"]:
+        company_runs_df = get_company_runs_df(
+            company_name=company["company_name"], target_date=target_date, config=CONFIG
+        )
+        if company_runs_df.is_empty():
+            continue
+        df_list.append(company_runs_df)
+    if not df_list:
+        return pl.DataFrame()
+    new_df = pl.concat(df_list)
+    return new_df
 
 
 if __name__ == "__main__":

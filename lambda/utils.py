@@ -29,6 +29,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!) {
                     createdAt
                     updatedAt
                     state
+                    tags
                     systemMetrics
                     runInfo {
                         gpuCount
