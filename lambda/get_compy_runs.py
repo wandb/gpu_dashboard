@@ -37,10 +37,10 @@ def get_company_runs_df(company_name: str, target_date: dt.date, config):
         )
         ### system_metrics
         metrics_df: pl.DataFrame = get_metrics_df(
+            target_date=target_date,
             company_name=run_info.company_name,
             project=run_info.project,
             run_id=run_info.run_id,
-            target_date=target_date
         )
         if len(metrics_df) == 0:
             continue
@@ -62,7 +62,7 @@ def get_company_runs_df(company_name: str, target_date: dt.date, config):
     return new_df
 
 
-def update_artifacts(df: pl.DataFrame, target_date: dt.date, config) -> pl.DataFrame:
+def update_artifacts(new_runs_df: pl.DataFrame, target_date: dt.date, config) -> pl.DataFrame:
     """今日取得したrunと過去に取得したrunをconcatしてartifactsをupdateする"""
     target_date_str = target_date.strftime("%Y-%m-%d")
     with wandb.init(
@@ -91,13 +91,14 @@ def update_artifacts(df: pl.DataFrame, target_date: dt.date, config) -> pl.DataF
             )
             # concatして重複するrunを除外
             all_runs_df = (
-                pl.concat((df.pipe(cast), old_runs_df.pipe(cast)))
-                .sort(["logged_at"], descending=True)
-                .unique(["company_name", "project", "run_id"])
-                .sort(["date", "logged_at"], descending=True)
+                pl.concat((new_runs_df.pipe(cast), old_runs_df.pipe(cast)))
+                .sort(["duration_hour"], descending=True)
+                .unique(["date", "company_name", "project", "run_id"], keep="first")
+                .sort(["date", "company_name", "project", "run_id"], descending=True)
             )
+            assert len(all_runs_df)>=len(old_runs_df), f"Data length error! all: {len(all_runs_df)}, old: {len(old_runs_df)}"
         else:
-            all_runs_df = df.clone()
+            all_runs_df = new_runs_df.clone()
         # アーティファクト更新
         all_runs_df.write_csv(csv_path)
         artifact = wandb.Artifact(name="gpu-usage", type="dataset")

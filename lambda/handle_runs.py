@@ -150,9 +150,6 @@ def get_metrics_df(
     metrics_df = pl.from_dataframe(run.history(stream="events"))
     if len(metrics_df) <= 1:
         return pl.DataFrame()
-    # limit_timestamp = dt.datetime.combine(
-    #     target_date + dt.timedelta(days=1), dt.time()
-    # ).timestamp()
     daily_metrics_df = (
         metrics_df.select(
             "_timestamp",
@@ -165,7 +162,7 @@ def get_metrics_df(
             .alias("datetime")
         )
         .filter(
-            pl.col("datetime").cast(pl.Date) <= target_date
+            pl.col("datetime").cast(pl.Date) <= (target_date + dt.timedelta(days=1))
         )
         .with_columns(pl.col("datetime").dt.date().alias("date"))
         .melt(

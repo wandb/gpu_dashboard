@@ -1,9 +1,9 @@
 companies:
-  - company_name: abeja-geniac # ABEJA
+  - company_name: stockmark-geniac # Stockmark
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
-  - company_name: stockmark-geniac # Stockmark
+  - company_name: abeja-geniac # ABEJA
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
