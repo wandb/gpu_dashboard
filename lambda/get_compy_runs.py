@@ -24,20 +24,23 @@ def get_company_runs_df(company_name: str, target_date: dt.date, config):
     df_list = []
     for run_info in tqdm(runs_info):
         ### basic table
-        basic_df: pl.DataFrame = divide_duration_daily(
-            start=run_info.created_at, end=run_info.updated_at
-        ).with_columns(
-            pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
-            pl.lit(run_info.company_name).alias("company_name"),
-            pl.lit(run_info.project).alias("project"),
-            pl.lit(run_info.run_id).alias("run_id"),
-            pl.lit(run_info.gpu_count).alias("gpu_count"),
+        basic_df: pl.DataFrame = (
+            divide_duration_daily(start=run_info.created_at, end=run_info.updated_at)
+            .with_columns(
+                pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
+                pl.lit(run_info.company_name).alias("company_name"),
+                pl.lit(run_info.project).alias("project"),
+                pl.lit(run_info.run_id).alias("run_id"),
+                pl.lit(run_info.gpu_count).alias("gpu_count"),
+            )
+            .filter(pl.col("date") <= target_date)
         )
         ### system_metrics
         metrics_df: pl.DataFrame = get_metrics_df(
             company_name=run_info.company_name,
             project=run_info.project,
             run_id=run_info.run_id,
+            target_date=target_date
         )
         if len(metrics_df) == 0:
             continue

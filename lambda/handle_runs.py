@@ -86,6 +86,10 @@ def fetch_runs(company_name: str, target_date: dt.date = None) -> list[RunInfo]:
             if (target_date is not None) & (target_date > updatedAt.date()):
                 continue
 
+            # 未来のものはスキップ
+            if (target_date is not None) & (target_date < createdAt.date()):
+                continue
+
             runInfo = run["runInfo"]
             gpuName = runInfo["gpu"]
             gpuCount = runInfo["gpuCount"]
@@ -132,6 +136,7 @@ def divide_duration_daily(start: dt.datetime, end: dt.datetime) -> pl.DataFrame:
 
 
 def get_metrics_df(
+    target_date: dt.date,
     company_name: str = None,
     project: str = None,
     run_id: str = None,
@@ -145,6 +150,9 @@ def get_metrics_df(
     metrics_df = pl.from_dataframe(run.history(stream="events"))
     if len(metrics_df) <= 1:
         return pl.DataFrame()
+    # limit_timestamp = dt.datetime.combine(
+    #     target_date + dt.timedelta(days=1), dt.time()
+    # ).timestamp()
     daily_metrics_df = (
         metrics_df.select(
             "_timestamp",
@@ -155,6 +163,9 @@ def get_metrics_df(
             pl.col("_timestamp")
             .map_elements(lambda x: dt.datetime.fromtimestamp(x))
             .alias("datetime")
+        )
+        .filter(
+            pl.col("datetime").cast(pl.Date) <= target_date
         )
         .with_columns(pl.col("datetime").dt.date().alias("date"))
         .melt(

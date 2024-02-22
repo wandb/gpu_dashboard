@@ -5,7 +5,6 @@ import json
 
 import polars as pl
 
-from agg_df import agg_company_daily
 from get_compy_runs import get_company_runs_df, update_artifacts
 from utils import CONFIG
 
