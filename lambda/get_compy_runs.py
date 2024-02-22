@@ -54,7 +54,7 @@ def get_company_runs_df(company_name: str, target_date: dt.date, config):
         return pl.DataFrame()
     new_df = pl.concat(df_list).with_columns(
         pl.lit(dt.datetime.now()).cast(pl.Datetime("us")).alias("logged_at")
-    )  # data型違うらしい
+    )
     return new_df
 
 

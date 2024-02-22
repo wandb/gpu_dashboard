@@ -146,7 +146,7 @@ def get_metrics_df(
     api = wandb.Api()
     run = api.run(path=run_path)
     metrics_df = pl.from_dataframe(run.history(stream="events"))
-    if (len(metrics_df) == 0) | (metrics_df.shape == (1, 1)):
+    if len(metrics_df) <= 1:
         return pl.DataFrame()
     daily_metrics_df = (
         metrics_df.select(
@@ -179,10 +179,10 @@ def get_metrics_df(
         .pivot(index="date", columns="gpu", values=["average", "max"])
         .select(
             "date",
-            "average_gpu_memory",
             "average_gpu_gpu",
-            "max_gpu_memory",
             "max_gpu_gpu",
+            "average_gpu_memory",
+            "max_gpu_memory",
         )
     )
     return daily_metrics_df
