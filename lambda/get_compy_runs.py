@@ -1,9 +1,12 @@
 import datetime as dt
-from tqdm import tqdm
+from pathlib import Path
+
+import pandas as pd
 import polars as pl
+from tqdm import tqdm
 
 from handle_runs import *
-
+from utils import cast
 
 """sample args
 company_name = "turing-geniac"
@@ -49,5 +52,51 @@ def get_company_runs_df(company_name: str, target_date: dt.date, config):
     ### combine
     if not df_list:
         return pl.DataFrame()
-    df = pl.concat(df_list)
-    return df
+    new_df = pl.concat(df_list).with_columns(
+        pl.lit(dt.datetime.now()).cast(pl.Datetime("us")).alias("logged_at")
+    )  # data型違うらしい
+    return new_df
+
+
+def update_artifacts(df: pl.DataFrame, target_date: dt.date, config) -> pl.DataFrame:
+    """今日取得したrunと過去に取得したrunをconcatしてartifactsをupdateする"""
+    target_date_str = target_date.strftime("%Y-%m-%d")
+    with wandb.init(
+        name=f"Update_{target_date_str}",
+        project=config["path_to_dashboard"]["project"],
+        job_type="update-datest",
+    ) as run:
+        csv_path = Path("/tmp/gpu-usage.csv")
+        # 過去のrunを取得
+        exist = True
+        try:
+            artifact = run.use_artifact("gpu-usage:latest")
+        except:
+            exist = False
+        if exist:
+            artifact.download("/tmp")
+            old_runs_df = pl.from_pandas(
+                pd.read_csv(
+                    csv_path,
+                    parse_dates=["logged_at"],
+                    date_format="ISO8601",
+                )
+            ).with_columns(
+                pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
+                pl.col("logged_at").cast(pl.Datetime("us")),
+            )
+            # concatして重複するrunを除外
+            all_runs_df = (
+                pl.concat((df.pipe(cast), old_runs_df.pipe(cast)))
+                .sort(["logged_at"], descending=True)
+                .unique(["company_name", "project", "run_id"])
+                .sort(["date", "logged_at"], descending=True)
+            )
+        else:
+            all_runs_df = df.clone()
+        # アーティファクト更新
+        all_runs_df.write_csv(csv_path)
+        artifact = wandb.Artifact(name="gpu-usage", type="dataset")
+        artifact.add_file(local_path=csv_path)
+        run.log_artifact(artifact)
+        return all_runs_df

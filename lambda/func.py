@@ -323,10 +323,10 @@ def update_artifacts(df: pl.DataFrame, target_date: dt.date) -> pl.DataFrame:
             all_runs_df = df.clone()
         finally:
             # アーティファクト更新
-            # all_runs_df.write_csv(csv_path)
-            # artifact = wandb.Artifact(name="gpu-usage", type="dataset")
-            # artifact.add_file(local_path=csv_path)
-            # run.log_artifact(artifact)
+            all_runs_df.write_csv(csv_path)
+            artifact = wandb.Artifact(name="gpu-usage", type="dataset")
+            artifact.add_file(local_path=csv_path)
+            run.log_artifact(artifact)
             return all_runs_df
 
 

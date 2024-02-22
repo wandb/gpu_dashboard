@@ -126,7 +126,7 @@ def divide_duration_daily(start: dt.datetime, end: dt.datetime) -> pl.DataFrame:
         )
         .with_columns(pl.col("datetime_mins").dt.strftime("%Y-%m-%d").alias("date"))
         .group_by("date")
-        .agg(pl.col("datetime_mins").count().truediv(60).alias("duration_hours"))
+        .agg(pl.col("datetime_mins").count().truediv(60).alias("duration_hour"))
     )
     return df
 
@@ -209,7 +209,7 @@ def get_gpu_schedule(config: dict[str, Any], target_date: dt.date) -> pl.DataFra
             pl.DataFrame(company["schedule"]), on="date", how="left"
         ).with_columns(
             pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
-            pl.col("assigned_gpu_node").forward_fill(),
+            pl.col("assigned_gpu_node").forward_fill().cast(pl.Float64),
             pl.lit(company["company_name"]).alias("company_name"),
         )
         df_list.append(gpu_df)

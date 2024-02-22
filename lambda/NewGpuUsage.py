@@ -6,7 +6,7 @@ import json
 import polars as pl
 
 from agg_df import agg_company_daily
-from get_compy_runs import get_company_runs_df
+from get_compy_runs import get_company_runs_df, update_artifacts
 from utils import CONFIG
 
 
@@ -16,6 +16,9 @@ def handler(event: dict[str, str], context: object) -> None:
     if WANDB_API_KEY is not None:
         del os.environ["WANDB_API_KEY"]
         os.environ["WANDB_API_KEY"] = WANDB_API_KEY
+    os.environ["WANDB_CACHE_DIR"] = "/tmp"
+    os.environ["WANDB_DATA_DIR"] = "/tmp"
+    os.environ["WANDB_DIR"] = "/tmp"
 
     ### set target date
     target_date_str = event.get("target_date")
@@ -38,9 +41,11 @@ def handler(event: dict[str, str], context: object) -> None:
             continue
         df_list.append(company_runs_df)
     if not df_list:
+        print("No runs detected.")
         return pl.DataFrame()
     new_df = pl.concat(df_list)
-    return new_df
+    all_runs_df = update_artifacts(df=new_df, target_date=target_date, config=CONFIG)
+    return all_runs_df
 
 
 if __name__ == "__main__":

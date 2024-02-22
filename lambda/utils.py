@@ -51,7 +51,7 @@ def back_to_utc(df: pl.DataFrame) -> pl.DataFrame:
     for col in datetime_cols:
         try:
             new_df = new_df.with_columns(
-                pl.col(col).map_elements(lambda x: x + dt.timedelta(hours=-9)),
+                pl.col(col).map_elements(lambda x: x + dt.timedelta(hour=-9)),
             )
         except:
             pass
@@ -108,12 +108,13 @@ def remove_project_tags(
 def cast(df: pl.DataFrame) -> pl.DataFrame:
     """Dataframeのdata型をcastする"""
     new_df = df.with_columns(
-        pl.col("gpu_count").cast(pl.Int64),
+        pl.col("gpu_count").cast(pl.Float64),
         pl.col("duration_hour").cast(pl.Float64),
-        pl.col("average_gpu_utilization").cast(pl.Float64),
-        pl.col("max_gpu_utilization").cast(pl.Float64),
         pl.col("average_gpu_memory").cast(pl.Float64),
+        pl.col("average_gpu_gpu").cast(pl.Float64),
         pl.col("max_gpu_memory").cast(pl.Float64),
+        pl.col("max_gpu_gpu").cast(pl.Float64),
+        pl.col("assigned_gpu_node").cast(pl.Float64),
     )
     return new_df
 
@@ -122,7 +123,7 @@ def set_date(target_date: dt.date) -> tuple[dt.date, dt.datetime]:
     """更新時の日付をsetする"""
     if target_date is None:
         target_date = dt.date.today()
-        processed_at = NOW_UTC + dt.timedelta(hours=9)
+        processed_at = NOW_UTC + dt.timedelta(hour=9)
     else:
         processed_at = dt.datetime.combine(
             target_date + dt.timedelta(days=1), dt.time()
