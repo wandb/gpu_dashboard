@@ -48,7 +48,7 @@ def get_company_runs_df(company_name: str, target_date: dt.date, config):
         )
         if tmp_df.is_empty():
             continue
-        df_list.append(tmp_df)
+        df_list.append(tmp_df.pipe(cast))
     ### combine
     if not df_list:
         return pl.DataFrame()
