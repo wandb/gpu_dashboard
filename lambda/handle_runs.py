@@ -82,8 +82,8 @@ def fetch_runs(company_name: str, target_date: dt.date = None) -> list[RunInfo]:
             if updatedAt.timestamp() == createdAt.timestamp():
                 continue
 
-            # 今日終了 or Running
-            if (target_date is not None) & (updatedAt.date() != target_date):
+            # 過去に終了したものはスキップ
+            if (target_date is not None) & (target_date > updatedAt.date()):
                 continue
 
             runInfo = run["runInfo"]
