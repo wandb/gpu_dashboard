@@ -145,15 +145,16 @@ def get_metrics_df(
         run_path = ("/").join((company_name, project, run_id))
     api = wandb.Api()
     run = api.run(path=run_path)
-    metrics_df = pl.from_dataframe(run.history(stream="events")).select(
-        "_timestamp",
-        gpu_ptn := ("^system\.gpu\.\d+\.gpu$"),
-        memory_ptn := ("^system\.gpu\.\d+\.memory$"),
-    )
-    if metrics_df.shape == (1, 1):
+    metrics_df = pl.from_dataframe(run.history(stream="events"))
+    if (len(metrics_df) == 0) | (metrics_df.shape == (1, 1)):
         return pl.DataFrame()
     daily_metrics_df = (
-        metrics_df.with_columns(
+        metrics_df.select(
+            "_timestamp",
+            gpu_ptn := ("^system\.gpu\.\d+\.gpu$"),
+            memory_ptn := ("^system\.gpu\.\d+\.memory$"),
+        )
+        .with_columns(
             pl.col("_timestamp")
             .map_elements(lambda x: dt.datetime.fromtimestamp(x))
             .alias("datetime")
