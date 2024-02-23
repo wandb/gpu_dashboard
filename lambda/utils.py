@@ -9,6 +9,13 @@ from tqdm import tqdm
 with open("config.yaml") as y:
     CONFIG = yaml.safe_load(y)
 
+# continue
+def testmode(counter: list) -> str:
+    if len(counter)==2:
+        return "continue"
+    else:
+        return None
+
 # 日付
 NOW_UTC = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
 UPDATE_DATE_STR = (NOW_UTC + dt.timedelta(hours=9)).strftime("%Y-%m-%d")

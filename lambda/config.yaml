@@ -43,7 +43,7 @@ companies:
 
 ### Production environment ### 
 path_to_dashboard:
-  # project: gpu-dashboard
   entity: geniac-gpu
+  # project: gpu-dashboard
   project: test-gpu-dashboard
   artifact_name: gpu-usage

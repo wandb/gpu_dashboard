@@ -9,6 +9,7 @@ def pipeline(
     gpu_schedule: list[EasyDict],
     target_date: dt.date,
     logged_at: dt.datetime,
+    testmode: bool,
 ) -> pl.DataFrame:
     gpu_schedule_df = pl.DataFrame(gpu_schedule).with_columns(
         pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
@@ -17,5 +18,5 @@ def pipeline(
     return pl.DataFrame()
 
 
-def update_artifacts(new_runs_df: pl.DataFrame) -> dict:
+def update_artifacts(new_runs_df: pl.DataFrame, path_to_dashboard: EasyDict) -> dict:
     return {}

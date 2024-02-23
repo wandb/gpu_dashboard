@@ -17,6 +17,8 @@ def handler(event: dict[str, str], context: object) -> None:
     ### Read yaml
     with open("config.yaml") as y:
         config = EasyDict(yaml.safe_load(y))
+    ### Test mode
+    print(f"Test mode: {config.testmode}")
 
     ### Set WANDB envirionment
     WANDB_API_KEY = event.get("WANDB_API_KEY")
@@ -53,8 +55,11 @@ def handler(event: dict[str, str], context: object) -> None:
             gpu_schedule=company_config.schedule,
             target_date=target_date,
             logged_at=dt.datetime.now(),
+            testmode=config.testmode,
         )
         if company_runs_df.is_empty():
+            continue
+        elif (config.testmode) & (len(df_list) == 2):
             continue
         else:
             df_list.append(company_runs_df)
@@ -64,17 +69,19 @@ def handler(event: dict[str, str], context: object) -> None:
         print(body := "!!! No runs found !!!")
         return {"statusCode": 200, "body": body}
 
-    ### Update artifacts
-    result: dict = update_artifacts(new_runs_df=new_runs_df)
+    ## Update artifacts
+    result: dict = update_artifacts(
+        new_runs_df=new_runs_df, path_to_dashboard=config.path_to_dashboard
+    )
 
     return {"statusCode": 200, "body": json.dumps(result)}
 
 
 if __name__ == "__main__":
     ### Parse
-    parser = argparse.ArgumentParser(description='推論実行ファイル')
-    parser.add_argument('api', type=str) # 「--」無しだと必須の引数
-    parser.add_argument('--target-date', type=str) # 「--」付きだとオプション引数
+    parser = argparse.ArgumentParser(description="推論実行ファイル")
+    parser.add_argument("--api", type=str, required=True)  # 「--」無しだと必須の引数
+    parser.add_argument("--target-date", type=str)  # 「--」付きだとオプション引数
     args = parser.parse_args()
     ### Run
     event = {"WANDB_API_KEY": args.api, "target_date": args.target_date}
