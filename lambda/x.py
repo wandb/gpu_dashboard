@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import datetime as dt
 import json
 
@@ -70,11 +71,11 @@ def handler(event: dict[str, str], context: object) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
-        event = {"WANDB_API_KEY": sys.argv[1]}
-    elif len(sys.argv) == 3:
-        event = {"WANDB_API_KEY": sys.argv[1], "target_date": sys.argv[2]}
-    else:
-        print("!!! Invalid numbers of args !!!")
-        exit()
+    ### Parse
+    parser = argparse.ArgumentParser(description='推論実行ファイル')
+    parser.add_argument('api', type=str) # 「--」無しだと必須の引数
+    parser.add_argument('--target-date', type=str) # 「--」付きだとオプション引数
+    args = parser.parse_args()
+    ### Run
+    event = {"WANDB_API_KEY": args.api, "target_date": args.target_date}
     handler(event=event, context=None)
