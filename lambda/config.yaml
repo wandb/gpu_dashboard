@@ -1,7 +1,7 @@
 environ:
-  - WANDB_CACHE_DIR: "/tmp"
-  - WANDB_DATA_DIR: "/tmp"
-  - WANDB_DIR: "/tmp"
+  WANDB_CACHE_DIR: "/tmp"
+  WANDB_DATA_DIR: "/tmp"
+  WANDB_DIR: "/tmp"
 
 testmode: true
 
