@@ -1,3 +1,10 @@
+environ:
+  - WANDB_CACHE_DIR: "/tmp"
+  - WANDB_DATA_DIR: "/tmp"
+  - WANDB_DIR: "/tmp"
+
+testmode: true
+
 companies:
   - company_name: stockmark-geniac # Stockmark
     schedule:
@@ -36,6 +43,7 @@ companies:
 
 ### Production environment ### 
 path_to_dashboard:
-  entity: geniac-gpu
   # project: gpu-dashboard
+  entity: geniac-gpu
   project: test-gpu-dashboard
+  artifact_name: gpu-usage
