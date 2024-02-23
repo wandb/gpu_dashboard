@@ -37,7 +37,8 @@ def handler(event: dict[str, str], context: object) -> None:
         try:
             target_date = dt.datetime.strptime(target_date_str, "%Y-%m-%d").date()
         except:
-            return {"statusCode": 200, "body": json.dumps("Invalid date format.")}
+            print(body := "!!! Invalid date format !!!")
+            return {"statusCode": 200, "body": json.dumps(body)}
     # Check
     print(f"Processing {target_date} ...")
 
@@ -58,7 +59,8 @@ def handler(event: dict[str, str], context: object) -> None:
     if df_list:
         new_runs_df = pl.concat(df_list)
     else:
-        return {"statusCode": 200, "body": "No runs found."}
+        print(body := "!!! No runs found !!!")
+        return {"statusCode": 200, "body": body}
 
     ### Update artifacts
     result: dict = update_artifacts(new_runs_df=new_runs_df)
@@ -72,6 +74,6 @@ if __name__ == "__main__":
     elif len(sys.argv) == 3:
         event = {"WANDB_API_KEY": sys.argv[1], "target_date": sys.argv[2]}
     else:
-        print("Invalid numbers of args.")
+        print("!!! Invalid numbers of args !!!")
         exit()
     handler(event=event, context=None)
