@@ -44,12 +44,13 @@ def handler(event: dict[str, str], context: object) -> None:
             print(body := "!!! Invalid date format !!!")
             return {"statusCode": 200, "body": json.dumps(body)}
     # Check
-    print(f"Processing {target_date} ...")
+    print(f"Target date is {target_date}")
 
     ### Get new runs
     df_list = []
     company_config: EasyDict
     for company_config in tqdm(config.companies):
+        print(f"Processing {company_config.company_name} ...")
         company_runs_df: pl.DataFrame = pipeline(
             company_name=company_config.company_name,
             gpu_schedule=company_config.schedule,
@@ -64,6 +65,7 @@ def handler(event: dict[str, str], context: object) -> None:
         else:
             df_list.append(company_runs_df)
     if df_list:
+        print(f"{len(df_list)} runs found.")
         new_runs_df = pl.concat(df_list)
     else:
         print(body := "!!! No runs found !!!")
