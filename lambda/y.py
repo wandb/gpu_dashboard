@@ -1,12 +1,12 @@
 import datetime as dt
-from typing import Union
 
+from easydict import EasyDict
 import polars as pl
 
 
 def pipeline(
     company_name: str,
-    gpu_schedule: list[dict[str, Union[str, int]]],
+    gpu_schedule: list[EasyDict],
     target_date: dt.date,
     logged_at: dt.datetime,
 ) -> pl.DataFrame:

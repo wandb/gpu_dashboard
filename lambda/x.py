@@ -3,6 +3,7 @@ import sys
 import datetime as dt
 import json
 
+from easydict import EasyDict
 import polars as pl
 from tqdm import tqdm
 import wandb
@@ -14,17 +15,17 @@ from y import pipeline, update_artifacts
 def handler(event: dict[str, str], context: object) -> None:
     ### Read yaml
     with open("config.yaml") as y:
-        config: dict = yaml.safe_load(y)
+        config = EasyDict(yaml.safe_load(y))
 
     ### Set WANDB envirionment
     WANDB_API_KEY = event.get("WANDB_API_KEY")
     if WANDB_API_KEY is not None:
         del os.environ["WANDB_API_KEY"]
         os.environ["WANDB_API_KEY"] = WANDB_API_KEY
-    environ = config["environ"]
-    os.environ["WANDB_CACHE_DIR"] = environ["WANDB_CACHE_DIR"]
-    os.environ["WANDB_DATA_DIR"] = environ["WANDB_DATA_DIR"]
-    os.environ["WANDB_DIR"] = environ["WANDB_DIR"]
+    environ = config.environ
+    os.environ["WANDB_CACHE_DIR"] = environ.WANDB_CACHE_DIR
+    os.environ["WANDB_DATA_DIR"] = environ.WANDB_DATA_DIR
+    os.environ["WANDB_DIR"] = environ.WANDB_DIR
     # Check
     print(f"Default entity: {wandb.api.default_entity}")
 
@@ -44,11 +45,11 @@ def handler(event: dict[str, str], context: object) -> None:
 
     ### Get new runs
     df_list = []
-    company_config: dict
-    for company_config in tqdm(config["companies"]):
+    company_config: EasyDict
+    for company_config in tqdm(config.companies):
         company_runs_df: pl.DataFrame = pipeline(
-            company_name=company_config["company_name"],
-            gpu_schedule=company_config["schedule"],
+            company_name=company_config.company_name,
+            gpu_schedule=company_config.schedule,
             target_date=target_date,
             logged_at=dt.datetime.now(),
         )
