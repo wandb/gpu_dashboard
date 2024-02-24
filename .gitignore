@@ -171,3 +171,4 @@ cdk.out
 **/artifacts/**/*
 **/Docker
 **/debug.ipynb
+**/run.py
