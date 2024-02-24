@@ -4,12 +4,15 @@ environ:
   WANDB_DIR: "/tmp"
 
 testmode: true
+ignore_tag: xyz
 
 companies:
   - company_name: stockmark-geniac # Stockmark
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
+      # - date: "2024-02-19"  # for test
+        # assigned_gpu_node: 40
   - company_name: abeja-geniac # ABEJA
     schedule:
       - date: "2024-02-15"

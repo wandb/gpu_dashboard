@@ -17,6 +17,7 @@ def handler(event: dict[str, str], context: object) -> None:
     ### Read yaml
     with open("config.yaml") as y:
         config = EasyDict(yaml.safe_load(y))
+
     ### Test mode
     print(f"Test mode: {config.testmode}")
 
@@ -44,44 +45,41 @@ def handler(event: dict[str, str], context: object) -> None:
             print(body := "!!! Invalid date format !!!")
             return {"statusCode": 200, "body": json.dumps(body)}
     # Check
-    print(f"Target date is {target_date}")
+    print(f"Target date: {target_date}")
 
     ### Get new runs
     df_list = []
     company_config: EasyDict
     for company_config in tqdm(config.companies):
-        print(f"Processing {company_config.company_name} ...")
+        if (config.testmode) & (len(df_list) == 2):
+            continue
         company_runs_df: pl.DataFrame = pipeline(
             company_name=company_config.company_name,
             gpu_schedule=company_config.schedule,
             target_date=target_date,
             logged_at=dt.datetime.now(),
+            ignore_tag=config.ignore_tag,
             testmode=config.testmode,
         )
         if company_runs_df.is_empty():
             continue
-        elif (config.testmode) & (len(df_list) == 2):
-            continue
-        else:
-            df_list.append(company_runs_df)
-    if df_list:
-        print(f"{len(df_list)} runs found.")
-        new_runs_df = pl.concat(df_list)
-    else:
+        df_list.append(company_runs_df)
+    if not df_list:
         print(body := "!!! No runs found !!!")
         return {"statusCode": 200, "body": body}
-
+    print(f"{len(df_list)} runs found.")
+    new_runs_df = pl.concat(df_list)
+        
     ## Update artifacts
     result: dict = update_artifacts(
         new_runs_df=new_runs_df, path_to_dashboard=config.path_to_dashboard
     )
-
     return {"statusCode": 200, "body": json.dumps(result)}
 
 
 if __name__ == "__main__":
     ### Parse
-    parser = argparse.ArgumentParser(description="推論実行ファイル")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--api", type=str, required=True)  # 「--」無しだと必須の引数
     parser.add_argument("--target-date", type=str)  # 「--」付きだとオプション引数
     args = parser.parse_args()
