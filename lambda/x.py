@@ -3,6 +3,7 @@ import sys
 import argparse
 import datetime as dt
 import json
+import time
 
 from easydict import EasyDict
 import polars as pl
@@ -14,6 +15,7 @@ from y import pipeline, update_artifacts
 
 
 def handler(event: dict[str, str], context: object) -> None:
+    start_time = time.time()
     ### Read yaml
     with open("config.yaml") as y:
         config = EasyDict(yaml.safe_load(y))
@@ -65,15 +67,27 @@ def handler(event: dict[str, str], context: object) -> None:
             continue
         df_list.append(company_runs_df)
     if not df_list:
-        print(body := "!!! No runs found !!!")
-        return {"statusCode": 200, "body": body}
-    print(f"{len(df_list)} runs found.")
-    new_runs_df = pl.concat(df_list)
-        
-    ## Update artifacts
+        print("No runs found")
+        new_runs_df = pl.DataFrame()
+    else:
+        print(f"{len(df_list)} runs found.")
+        new_runs_df = pl.concat(df_list)
+
+    ### Update artifacts
     result: dict = update_artifacts(
-        new_runs_df=new_runs_df, path_to_dashboard=config.path_to_dashboard
+        new_runs_df=new_runs_df,
+        target_date=target_date,
+        path_to_dashboard=config.path_to_dashboard,
+        testmode=config.testmode,
     )
+    ### Add summary
+    end_time = time.time()
+    result["target_date"] = target_date_str
+    result["elapsed_time"] = "{} min {} sec".format(
+        int((end_time - start_time) // 60), int((end_time - start_time) % 60)
+    )
+    result["testmode"] = config.testmode
+    print(result)
     return {"statusCode": 200, "body": json.dumps(result)}
 
 

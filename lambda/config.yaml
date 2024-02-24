@@ -49,5 +49,6 @@ companies:
 path_to_dashboard:
   entity: geniac-gpu
   # project: gpu-dashboard
-  project: test-gpu-dashboard
-  artifact_name: gpu-usage
+  project: test-gpu-dashboard # for test
+  # artifact_name: gpu-usage
+  artifact_name: test-gpu-usage # for test

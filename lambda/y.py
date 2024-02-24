@@ -1,10 +1,14 @@
 import datetime as dt
+from pathlib import Path
 
 from easydict import EasyDict
+import pandas as pd
 import polars as pl
 from tqdm import tqdm
+import wandb
 
 from z import fetch_runs, get_gpu_schedule, divide_duration_daily, get_metrics
+from utils import set_schema
 
 
 def pipeline(
@@ -69,6 +73,7 @@ def pipeline(
             pl.lit(run_info.created_at).alias("created_at"),
             pl.lit(run_info.updated_at).alias("updated_at"),
             pl.lit(logged_at).alias("logged_at"),
+            pl.lit(testmode).alias("testmode"),
         )
         df_list.append(new_run_df)
     if df_list:
@@ -86,11 +91,12 @@ def pipeline(
                 "state",
                 "duration_hour",
                 "gpu_count",
-                "average_gpu_memory",
                 "average_gpu_utilization",
-                "max_gpu_memory",
+                "average_gpu_memory",
                 "max_gpu_utilization",
+                "max_gpu_memory",
                 "logged_at",
+                "testmode",
             )
         )
         return new_runs_df
@@ -98,5 +104,66 @@ def pipeline(
         return pl.DataFrame()
 
 
-def update_artifacts(new_runs_df: pl.DataFrame, path_to_dashboard: EasyDict) -> dict:
-    return {}
+def update_artifacts(
+    new_runs_df: pl.DataFrame, target_date: dt.date, path_to_dashboard: EasyDict, testmode: bool
+) -> dict:
+    """今日取得したrunと過去に取得したrunをconcatしてartifactsをupdateする"""
+    target_date_str = target_date.strftime("%Y-%m-%d")
+    with wandb.init(
+        entity=path_to_dashboard.entity,
+        project=path_to_dashboard.project,
+        name=f"Update_{target_date_str}",
+        job_type="update-datest",
+    ) as run:
+        csv_path = Path(f"/tmp/{path_to_dashboard.artifact_name}.csv")
+        # 過去のrunの存在を確認
+        exist = True
+        try:
+            artifact = run.use_artifact(f"{path_to_dashboard.artifact_name}:latest")
+        except:
+            exist = False
+        if exist:
+            # 過去のrunを取得
+            artifact.download("/tmp")
+            old_runs_df = pl.from_pandas(
+                pd.read_csv(
+                    csv_path,
+                    parse_dates=["created_at", "updated_at", "logged_at"],
+                    date_format="ISO8601",
+                )
+            ).with_columns(
+                pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
+                pl.col("created_at").cast(pl.Datetime("us")),
+                pl.col("updated_at").cast(pl.Datetime("us")),
+                pl.col("logged_at").cast(pl.Datetime("us")),
+            )
+            # concatして重複するrunを除外
+            all_runs_df = (
+                pl.concat((new_runs_df.pipe(set_schema), old_runs_df.pipe(set_schema)))
+                .sort(["logged_at"], descending=True)
+                .unique(["date", "company_name", "project", "run_id"], keep="first")
+                .sort(["run_id", "project"])
+                .sort(["date"], descending=True)
+                .sort(["company_name"])
+            )
+            assert len(all_runs_df["testmode"]) != 1, f"Testmode not matched."
+            assert len(all_runs_df) >= len(
+                old_runs_df
+            ), f"!!! Data length error !!! all: {len(all_runs_df)}, old: {len(old_runs_df)}"
+        else:
+            if new_runs_df.is_empty():
+                # Artifactが存在しなくて、新しいrunもない
+                return {"message": "No runs found"}
+            old_runs_df = pl.DataFrame()
+            all_runs_df = new_runs_df.clone()
+        # アーティファクト更新
+        all_runs_df.write_csv(csv_path)
+        artifact = wandb.Artifact(
+            name=path_to_dashboard.artifact_name,
+            type="dataset",
+            metadata={"version": target_date_str, "testmode": testmode},
+        )
+        artifact.add_file(local_path=csv_path)
+        run.log_artifact(artifact)
+        num_diff_records = len(all_runs_df) - len(old_runs_df)
+        return {"num_diff_records": num_diff_records}

@@ -112,16 +112,17 @@ def remove_project_tags(
         run.update()
 
 
-def cast(df: pl.DataFrame) -> pl.DataFrame:
+def set_schema(df: pl.DataFrame) -> pl.DataFrame:
     """Dataframeのdata型をcastする"""
     new_df = df.with_columns(
-        pl.col("gpu_count").cast(pl.Float64),
-        pl.col("duration_hour").cast(pl.Float64),
-        pl.col("average_gpu_memory").cast(pl.Float64),
-        pl.col("average_gpu_gpu").cast(pl.Float64),
-        pl.col("max_gpu_memory").cast(pl.Float64),
-        pl.col("max_gpu_gpu").cast(pl.Float64),
+        pl.col("run_id").cast(pl.String),
         pl.col("assigned_gpu_node").cast(pl.Float64),
+        pl.col("duration_hour").cast(pl.Float64),
+        pl.col("gpu_count").cast(pl.Float64),
+        pl.col("average_gpu_utilization").cast(pl.Float64),
+        pl.col("average_gpu_memory").cast(pl.Float64),
+        pl.col("max_gpu_utilization").cast(pl.Float64),
+        pl.col("max_gpu_memory").cast(pl.Float64),
     )
     return new_df
 
