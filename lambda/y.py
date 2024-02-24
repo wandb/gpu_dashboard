@@ -24,7 +24,7 @@ def pipeline(
     if target_date < min(pl.DataFrame(gpu_schedule)["date"].cast(pl.Date)):
         print("    Not started.")
         return pl.DataFrame()
-    gpu_schedule_df = get_gpu_schedule(
+    gpu_schedule_df: pl.Dataframe = get_gpu_schedule(
         gpu_schedule=gpu_schedule, target_date=target_date
     )
     ### Run取得
@@ -43,12 +43,12 @@ def pipeline(
         # Process each runs
         if (testmode) & (len(df_list) == 2):
             continue
-        duration_df = divide_duration_daily(
+        duration_df: pl.Dataframe = divide_duration_daily(
             start=run_info.created_at,
             end=run_info.updated_at,
             target_date=target_date,
         )
-        metrics_df = get_metrics(
+        metrics_df: pl.Dataframe = get_metrics(
             target_date=target_date,
             company_name=run_info.company_name,
             project=run_info.project,
@@ -56,32 +56,28 @@ def pipeline(
         )
         # Join
         if metrics_df.is_empty():
-            _new_run_df = duration_df.with_columns(
-                pl.lit(None).alias("average_gpu_utilization"),
-                pl.lit(None).alias("max_gpu_utilization"),
-                pl.lit(None).alias("average_gpu_memory"),
-                pl.lit(None).alias("max_gpu_memory"),
+            _new_run_df: pl.Dataframe = duration_df.with_columns(
+                pl.lit(None).cast(pl.Float64).alias("average_gpu_utilization"),
+                pl.lit(None).cast(pl.Float64).alias("max_gpu_utilization"),
+                pl.lit(None).cast(pl.Float64).alias("average_gpu_memory"),
+                pl.lit(None).cast(pl.Float64).alias("max_gpu_memory"),
             )
         else:
-            _new_run_df = duration_df.join(metrics_df, on=["date"], how="left")
-        new_run_df = _new_run_df.with_columns(
+            _new_run_df: pl.Dataframe = duration_df.join(metrics_df, on=["date"], how="left")
+        new_run_df: pl.Dataframe = _new_run_df.with_columns(
             pl.lit(run_info.company_name).cast(pl.String).alias("company_name"),
             pl.lit(run_info.project).cast(pl.String).alias("project"),
             pl.lit(run_info.run_id).cast(pl.String).alias("run_id"),
-            pl.lit(run_info.gpu_count).cast(pl.Float64).alias("gpu_count"),
-            pl.lit(run_info.state).cast(pl.String).alias("state"),
             pl.lit(run_info.created_at).cast(pl.Datetime).alias("created_at"),
             pl.lit(run_info.updated_at).cast(pl.Datetime).alias("updated_at"),
+            pl.lit(run_info.state).cast(pl.String).alias("state"),
+            pl.lit(run_info.gpu_count).cast(pl.Float64).alias("gpu_count"),
             pl.lit(logged_at).cast(pl.Datetime).alias("logged_at"),
             pl.lit(testmode).cast(bool).alias("testmode"),
-            pl.col("average_gpu_utilization").cast(pl.Float64),
-            pl.col("max_gpu_utilization").cast(pl.Float64),
-            pl.col("average_gpu_memory").cast(pl.Float64),
-            pl.col("max_gpu_memory").cast(pl.Float64),
         )
         df_list.append(new_run_df)
     if df_list:
-        new_runs_df = (
+        new_runs_df: pl.Dataframe = (
             pl.concat(df_list)
             .join(gpu_schedule_df, on=["date"], how="left")
             .select(

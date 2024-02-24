@@ -131,9 +131,14 @@ def get_gpu_schedule(
         .cast(pl.Date)
         .alias("date")
     )
-    gpu_schedule_df = date_df.join(
-        _gpu_schedule_df, on=["date"], how="left"
-    ).with_columns(pl.col("assigned_gpu_node").forward_fill().cast(pl.Float64))
+    gpu_schedule_df = (
+        date_df.join(_gpu_schedule_df, on=["date"], how="left")
+        .with_columns(pl.col("assigned_gpu_node").forward_fill())
+        .select(
+            pl.col("date").cast(pl.Date),
+            pl.col("assigned_gpu_node").cast(pl.Float64),
+        )
+    )
     return gpu_schedule_df
 
 
@@ -167,11 +172,13 @@ def divide_duration_daily(
             pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
         )
         .filter((pl.col("date") <= target_date))
-        # .select(
-
-        # )
+        .select(
+            pl.col("date").cast(pl.Date),
+            pl.col("duration_hour").cast(pl.Float64),
+        )
     )
     return df
+
 
 def get_metrics(
     target_date: dt.date,
@@ -221,13 +228,18 @@ def get_metrics(
             .alias("metrics_hours"),
         )
         .pivot(index="date", columns="gpu", values=["average", "max"])
-        .rename({f"{prefix}_gpu_gpu": f"{prefix}_gpu_utilization" for prefix in ("average", "max")})
+        .rename(
+            {
+                f"{prefix}_gpu_gpu": f"{prefix}_gpu_utilization"
+                for prefix in ("average", "max")
+            }
+        )
         .select(
-            "date",
-            "average_gpu_utilization",
-            "max_gpu_utilization",
-            "average_gpu_memory",
-            "max_gpu_memory",
+            pl.col("date").cast(pl.Date),
+            pl.col("average_gpu_utilization").cast(pl.Float64),
+            pl.col("max_gpu_utilization").cast(pl.Float64),
+            pl.col("average_gpu_memory").cast(pl.Float64),
+            pl.col("max_gpu_memory").cast(pl.Float64),
         )
     )
     return daily_metrics_df
