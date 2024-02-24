@@ -65,15 +65,19 @@ def pipeline(
         else:
             _new_run_df = duration_df.join(metrics_df, on=["date"], how="left")
         new_run_df = _new_run_df.with_columns(
-            pl.lit(run_info.company_name).alias("company_name"),
-            pl.lit(run_info.project).alias("project"),
-            pl.lit(run_info.run_id).alias("run_id"),
-            pl.lit(run_info.gpu_count).alias("gpu_count"),
-            pl.lit(run_info.state).alias("state"),
-            pl.lit(run_info.created_at).alias("created_at"),
-            pl.lit(run_info.updated_at).alias("updated_at"),
-            pl.lit(logged_at).alias("logged_at"),
-            pl.lit(testmode).alias("testmode"),
+            pl.lit(run_info.company_name).cast(pl.String).alias("company_name"),
+            pl.lit(run_info.project).cast(pl.String).alias("project"),
+            pl.lit(run_info.run_id).cast(pl.String).alias("run_id"),
+            pl.lit(run_info.gpu_count).cast(pl.Float64).alias("gpu_count"),
+            pl.lit(run_info.state).cast(pl.String).alias("state"),
+            pl.lit(run_info.created_at).cast(pl.Datetime).alias("created_at"),
+            pl.lit(run_info.updated_at).cast(pl.Datetime).alias("updated_at"),
+            pl.lit(logged_at).cast(pl.Datetime).alias("logged_at"),
+            pl.lit(testmode).cast(bool).alias("testmode"),
+            pl.col("average_gpu_utilization").cast(pl.Float64),
+            pl.col("max_gpu_utilization").cast(pl.Float64),
+            pl.col("average_gpu_memory").cast(pl.Float64),
+            pl.col("max_gpu_memory").cast(pl.Float64),
         )
         df_list.append(new_run_df)
     if df_list:
