@@ -7,8 +7,15 @@ import polars as pl
 from tqdm import tqdm
 import wandb
 
-from z import fetch_runs, get_gpu_schedule, divide_duration_daily, get_metrics
-from utils import set_schema
+from z import (
+    fetch_runs,
+    get_gpu_schedule,
+    divide_duration_daily,
+    get_metrics,
+    read_table_csv,
+    daily_summarize,
+    set_schema,
+)
 
 
 def pipeline(
@@ -47,6 +54,14 @@ def pipeline(
             start=run_info.created_at,
             end=run_info.updated_at,
             target_date=target_date,
+        ).with_columns(
+            pl.lit(run_info.company_name).cast(pl.String).alias("company_name"),
+            pl.lit(run_info.project).cast(pl.String).alias("project"),
+            pl.lit(run_info.run_id).cast(pl.String).alias("run_id"),
+            pl.lit(run_info.created_at).cast(pl.Datetime).alias("created_at"),
+            pl.lit(run_info.updated_at).cast(pl.Datetime).alias("updated_at"),
+            pl.lit(run_info.state).cast(pl.String).alias("state"),
+            pl.lit(run_info.gpu_count).cast(pl.Float64).alias("gpu_count"),
         )
         metrics_df: pl.Dataframe = get_metrics(
             target_date=target_date,
@@ -55,33 +70,25 @@ def pipeline(
             run_id=run_info.run_id,
         )
         # Join
+        _new_run_df: pl.Dataframe
         if metrics_df.is_empty():
-            _new_run_df: pl.Dataframe = duration_df.with_columns(
+            new_run_df = duration_df.with_columns(
                 pl.lit(None).cast(pl.Float64).alias("average_gpu_utilization"),
                 pl.lit(None).cast(pl.Float64).alias("max_gpu_utilization"),
                 pl.lit(None).cast(pl.Float64).alias("average_gpu_memory"),
                 pl.lit(None).cast(pl.Float64).alias("max_gpu_memory"),
             )
         else:
-            _new_run_df: pl.Dataframe = duration_df.join(
-                metrics_df, on=["date"], how="left"
-            )
-        new_run_df: pl.Dataframe = _new_run_df.with_columns(
-            pl.lit(run_info.company_name).cast(pl.String).alias("company_name"),
-            pl.lit(run_info.project).cast(pl.String).alias("project"),
-            pl.lit(run_info.run_id).cast(pl.String).alias("run_id"),
-            pl.lit(run_info.created_at).cast(pl.Datetime).alias("created_at"),
-            pl.lit(run_info.updated_at).cast(pl.Datetime).alias("updated_at"),
-            pl.lit(run_info.state).cast(pl.String).alias("state"),
-            pl.lit(run_info.gpu_count).cast(pl.Float64).alias("gpu_count"),
-            pl.lit(logged_at).cast(pl.Datetime).alias("logged_at"),
-            pl.lit(testmode).cast(bool).alias("testmode"),
-        )
+            new_run_df = duration_df.join(metrics_df, on=["date"], how="left")
         df_list.append(new_run_df)
     if df_list:
         new_runs_df: pl.Dataframe = (
             pl.concat(df_list)
             .join(gpu_schedule_df, on=["date"], how="left")
+            .with_columns(
+                pl.lit(logged_at).cast(pl.Datetime).alias("logged_at"),
+                pl.lit(testmode).cast(bool).alias("testmode"),
+            )
             .select(
                 "date",
                 "company_name",
@@ -109,6 +116,7 @@ def pipeline(
 def update_artifacts(
     new_runs_df: pl.DataFrame,
     target_date: dt.date,
+    wandb_dir: str,
     path_to_dashboard: EasyDict,
     elapsed_time: str,
     testmode: bool,
@@ -130,18 +138,8 @@ def update_artifacts(
             exist = False
         if exist:
             # 過去のrunを取得
-            artifact.download("/tmp")
-            old_runs_df = pl.from_pandas(
-                pd.read_csv(
-                    csv_path,
-                    parse_dates=["created_at", "updated_at", "logged_at"],
-                    date_format="ISO8601",
-                )
-            ).with_columns(
-                pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
-                pl.col("created_at").cast(pl.Datetime("us")),
-                pl.col("updated_at").cast(pl.Datetime("us")),
-                pl.col("logged_at").cast(pl.Datetime("us")),
+            old_runs_df = read_table_csv(
+                run=run, wandb_dir=wandb_dir, artifact_name=path_to_dashboard.artifact_name
             )
             # concatして重複するrunを除外
             all_runs_df = (
@@ -175,4 +173,74 @@ def update_artifacts(
         artifact.add_file(local_path=csv_path)
         run.log_artifact(artifact)
         new_records = len(all_runs_df) - len(old_runs_df)
-        return {"new_records": new_records}
+        return new_records
+
+
+def update_tables(
+    wandb_dir: str, path_to_dashboard: EasyDict, target_date_str: str
+) -> list[pl.DataFrame]:
+    #Fetch csv
+    with wandb.init(
+        entity=path_to_dashboard.entity,
+        project=path_to_dashboard.project,
+        name=f"Read_{target_date_str}",
+        job_type="read-table",
+    ) as run:
+        all_runs_df = read_table_csv(
+            run=run, wandb_dir=wandb_dir, artifact_name=path_to_dashboard.artifact_name
+        )
+    # Daily summary
+    daily_summary_df = daily_summarize(df=all_runs_df)
+    for company_name in daily_summary_df["company_name"].unique():
+        company_df = daily_summary_df.filter(pl.col("company_name") == company_name)
+        with wandb.init(
+            entity=path_to_dashboard.entity,
+            project=path_to_dashboard.project,
+            name=f"Tables_{target_date_str}",
+            job_type="update-table",
+            tags=[company_name, "latest"]
+        ) as run:
+            wandb.log({"company_daily_gpu_usage": wandb.Table(data=company_df.to_pandas())})
+    # Overall summary
+    return {}
+
+
+
+# ### Utils
+# def log_to_wandb(
+#     path_to_dashboard: EasyDict,
+#     run_name: str,
+#     tables: dict[str, pl.DataFrame],
+#     tags: list[str],
+# ) -> None:
+#     """Tableをwandbに出力する"""         # 時差を考慮
+#     assert wandb.Api().default_entity == entity
+#     config = dict(
+#         entity=path_to_dashboard.entity,
+#         project=path_to_dashboard.project,
+#         name=run_name,
+#         tags=tags,
+#     )
+#     with wandb.init(**config) as run:
+#         for tbl_name, df in tables.items():
+#             wandb.log({tbl_name: wandb.Table(data=df.to_pandas())})
+#     return None
+
+
+# def download_artifacts(path_to_dashboard: EasyDict) -> pl.DataFrame:
+#     artifact = run.use_artifact(f"{path_to_dashboard.artifact_name}:latest")
+#     artifact.download("/tmp")
+#     csv_path = Path(f"/tmp/{path_to_dashboard.artifact_name}.csv")
+#     old_runs_df = pl.from_pandas(
+#         pd.read_csv(
+#             csv_path,
+#             parse_dates=["created_at", "updated_at", "logged_at"],
+#             date_format="ISO8601",
+#         )
+#     ).with_columns(
+#         pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
+#         pl.col("created_at").cast(pl.Datetime("us")),
+#         pl.col("updated_at").cast(pl.Datetime("us")),
+#         pl.col("logged_at").cast(pl.Datetime("us")),
+#     )
+#     return

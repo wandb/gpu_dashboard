@@ -11,8 +11,8 @@ from tqdm import tqdm
 import wandb
 import yaml
 
-from y import pipeline, update_artifacts
-
+from y import pipeline, update_artifacts, update_tables
+from z import read_table_csv
 
 def handler(event: dict[str, str], context: object) -> None:
     start_time = time.time()
@@ -28,10 +28,9 @@ def handler(event: dict[str, str], context: object) -> None:
     if WANDB_API_KEY is not None:
         del os.environ["WANDB_API_KEY"]
         os.environ["WANDB_API_KEY"] = WANDB_API_KEY
-    environ = config.environ
-    os.environ["WANDB_CACHE_DIR"] = environ.WANDB_CACHE_DIR
-    os.environ["WANDB_DATA_DIR"] = environ.WANDB_DATA_DIR
-    os.environ["WANDB_DIR"] = environ.WANDB_DIR
+    os.environ["WANDB_CACHE_DIR"] = config.wandb_dir
+    os.environ["WANDB_DATA_DIR"] = config.wandb_dir
+    os.environ["WANDB_DIR"] = config.wandb_dir
     # Check
     print(f"Default entity: {wandb.api.default_entity}")
 
@@ -74,30 +73,39 @@ def handler(event: dict[str, str], context: object) -> None:
         print(f"{len(new_runs_df)} runs found.")
 
     ### Update artifacts
-    end_time = time.time()
-    elapsed_time = "{} min {} sec".format(
-        int((end_time - start_time) // 60), int((end_time - start_time) % 60)
+    end_time1 = time.time()
+    elapsed_time1 = "{} min {} sec".format(
+        int((end_time1 - start_time) // 60), int((end_time1 - start_time) % 60)
     )
-    result: dict = update_artifacts(
+    new_records: int = update_artifacts(
         new_runs_df=new_runs_df,
         target_date=target_date,
+        wandb_dir=config.wandb_dir,
         path_to_dashboard=config.path_to_dashboard,
-        elapsed_time=elapsed_time,
+        elapsed_time=elapsed_time1,
         testmode=config.testmode,
     )
     ### Add summary
-    result["elapsed_time"] = elapsed_time
+    result = {}
     result["target_date"] = target_date_str
+    result["new_records"] = new_records
+    result["elapsed_time1"] = elapsed_time1
     result["testmode"] = config.testmode
     print(result)
+
+    # ### Upate tables
+    # update_tables(
+    #     wandb_dir=config.wandb_dir, path_to_dashboard=config.path_to_dashboard, target_date_str=target_date_str
+    # )
+    # return {"statusCode": 200, "body": json.dumps("OK")}
     return {"statusCode": 200, "body": json.dumps(result)}
 
 
 if __name__ == "__main__":
     ### Parse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--api", type=str, required=True)  # 「--」無しだと必須の引数
-    parser.add_argument("--target-date", type=str)  # 「--」付きだとオプション引数
+    parser.add_argument("--api", type=str, required=True)
+    parser.add_argument("--target-date", type=str)
     args = parser.parse_args()
     ### Run
     event = {"WANDB_API_KEY": args.api, "target_date": args.target_date}

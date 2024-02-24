@@ -1,11 +1,15 @@
-environ:
-  WANDB_CACHE_DIR: "/tmp"
-  WANDB_DATA_DIR: "/tmp"
-  WANDB_DIR: "/tmp"
-
+wandb_dir: "/tmp"
+ignore_tag: xyz
 testmode: false
 # testmode: true
-ignore_tag: xyz
+
+path_to_dashboard:
+  entity: geniac-gpu
+  # project: gpu-dashboard
+  project: test-gpu-dashboard # for test
+  # artifact_name: gpu-usage
+  # artifact_name: test-gpu-usage # for test
+  artifact_name: test2 # for test
 
 companies:
   - company_name: stockmark-geniac # Stockmark
@@ -44,12 +48,3 @@ companies:
     schedule:
       - date: "2024-06-15"
         assigned_gpu_node: 32
-
-### Production environment ### 
-path_to_dashboard:
-  entity: geniac-gpu
-  # project: gpu-dashboard
-  project: test-gpu-dashboard # for test
-  # artifact_name: gpu-usage
-  # artifact_name: test-gpu-usage # for test
-  artifact_name: rapid # for test

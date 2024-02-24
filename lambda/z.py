@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 import datetime as dt
+from pathlib import Path
 import re
 
 from easydict import EasyDict
+import pandas as pd
 import polars as pl
 import wandb
 from wandb_gql import gql
@@ -117,13 +119,13 @@ def fetch_runs(
 def get_gpu_schedule(
     gpu_schedule: list[EasyDict], target_date: dt.date
 ) -> pl.DataFrame:
-    _gpu_schedule_df = pl.DataFrame(gpu_schedule).with_columns(
+    gpu_schedule_df = pl.DataFrame(gpu_schedule).with_columns(
         pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
         pl.col("assigned_gpu_node").cast(pl.Float64),
     )
     date_df = pl.DataFrame(
         pl.datetime_range(
-            start=min(_gpu_schedule_df["date"]),
+            start=min(gpu_schedule_df["date"]),
             end=target_date,
             interval="1d",
             eager=True,
@@ -131,15 +133,15 @@ def get_gpu_schedule(
         .cast(pl.Date)
         .alias("date")
     )
-    gpu_schedule_df = (
-        date_df.join(_gpu_schedule_df, on=["date"], how="left")
+    expanded_gpu_schedule_df = (
+        date_df.join(gpu_schedule_df, on=["date"], how="left")
         .with_columns(pl.col("assigned_gpu_node").forward_fill())
         .select(
             pl.col("date").cast(pl.Date),
             pl.col("assigned_gpu_node").cast(pl.Float64),
         )
     )
-    return gpu_schedule_df
+    return expanded_gpu_schedule_df
 
 
 def divide_duration_daily(
@@ -195,19 +197,25 @@ def get_metrics(
     ### Process
     if len(metrics_df) <= 1:
         return pl.DataFrame()
+    metrics_df_with_datetime = metrics_df.with_columns(
+        pl.col("_timestamp")
+        .map_elements(lambda x: dt.datetime.fromtimestamp(x))
+        .alias("datetime")
+    ).filter(
+        pl.col("datetime")
+        <= dt.datetime.combine(target_date + dt.timedelta(days=1), dt.time())
+    )
+    if metrics_df_with_datetime.is_empty():
+        return pl.DataFrame()
     daily_metrics_df = (
-        metrics_df.lazy()
+        metrics_df_with_datetime.lazy()
         .select(
+            "datetime",
             "_timestamp",
             gpu_ptn := ("^system\.gpu\.\d+\.gpu$"),
             memory_ptn := ("^system\.gpu\.\d+\.memory$"),
         )
-        .with_columns(
-            pl.col("_timestamp")
-            .map_elements(lambda x: dt.datetime.fromtimestamp(x))
-            .alias("datetime")
-        )
-        .with_columns(pl.col("datetime").dt.date().alias("date"))
+        .with_columns(pl.col("datetime").cast(pl.Date).alias("date"))
         .melt(
             id_vars=["date", "datetime", "_timestamp"],
             value_vars=[c for c in metrics_df.columns if re.findall(gpu_ptn, c)]
@@ -241,3 +249,113 @@ def get_metrics(
         )
     )
     return daily_metrics_df
+
+def read_table_csv(run: object, wandb_dir: str, artifact_name: str) -> pl.DataFrame:
+    artifact = run.use_artifact(f"{artifact_name}:latest")
+    artifact.download(wandb_dir)
+    csv_path = Path(f"{wandb_dir}/{artifact_name}.csv")
+    df = pl.from_pandas(
+        pd.read_csv(
+            csv_path,
+            parse_dates=["created_at", "updated_at", "logged_at"],
+            date_format="ISO8601",
+        )
+    ).with_columns(
+        pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
+        pl.col("created_at").cast(pl.Datetime("us")),
+        pl.col("updated_at").cast(pl.Datetime("us")),
+        pl.col("logged_at").cast(pl.Datetime("us")),
+    )
+    return df
+
+def daily_summarize(df: pl.DataFrame) -> pl.DataFrame:
+    metrics_duraion_df = (
+        df.filter(pl.col("max_gpu_memory").is_not_null())
+        .with_columns(
+            (pl.col("average_gpu_utilization") * pl.col("duration_hour")).alias(
+                "weighted_average_gpu_utilization"
+            ),
+            (pl.col("average_gpu_memory") * pl.col("duration_hour")).alias(
+                "weighted_average_gpu_memory"
+            ),
+        )
+        .group_by("date", "company_name")
+        .agg(
+            pl.col("duration_hour").sum().alias("metrics_duration_hour"),
+            pl.col("weighted_average_gpu_utilization").sum(),
+            pl.col("weighted_average_gpu_memory").sum(),
+        )
+        .with_columns(
+            (
+                pl.col("weighted_average_gpu_utilization")
+                / pl.col("metrics_duration_hour")
+            ).alias("average_gpu_utilization"),
+            (
+                pl.col("weighted_average_gpu_memory") / pl.col("metrics_duration_hour")
+            ).alias("average_gpu_memory"),
+        )
+        .select(
+            "date",
+            "company_name",
+            "average_gpu_utilization",
+            "average_gpu_memory",
+            "metrics_duration_hour",
+        )
+    )
+
+    daily_summary_df = (
+        df.with_columns(
+            (pl.col("duration_hour") * pl.col("gpu_count")).alias("total_gpu_hour"),
+        )
+        .group_by("date", "company_name")
+        .agg(
+            pl.col("run_id").count().alias("n_runs"),
+            pl.col("duration_hour").sum(),
+            pl.col("total_gpu_hour").sum(),
+            pl.col("assigned_gpu_node").max(),
+            pl.col("max_gpu_utilization").max(),
+            pl.col("max_gpu_memory").max(),
+        )
+        .with_columns(
+            pl.col("assigned_gpu_node").mul(8).mul(24).alias("assigned_gpu_hour"),
+        )
+        .with_columns(
+            (
+                pl.col("total_gpu_hour").truediv(pl.col("assigned_gpu_hour")).mul(100)
+            ).alias("utilization_rate"),
+        )
+        .join(metrics_duraion_df, on=["date", "company_name"])
+        .sort(["date"], descending=True)
+        .sort(["company_name"])
+        .select(
+            pl.col("date").dt.strftime("%Y-%m-%d").alias("date"),
+            "company_name",
+            "n_runs",
+            "assigned_gpu_node",
+            "duration_hour",
+            "total_gpu_hour",
+            "assigned_gpu_hour",
+            "metrics_duration_hour",
+            "utilization_rate",
+            "average_gpu_utilization",
+            "max_gpu_utilization",
+            "average_gpu_memory",
+            "max_gpu_memory",
+        )
+    )
+    return daily_summary_df
+
+
+def set_schema(df: pl.DataFrame) -> pl.DataFrame:
+    """Dataframeのdata型をcastする"""
+    new_df = df.with_columns(
+        pl.col("run_id").cast(pl.String),
+        pl.col("assigned_gpu_node").cast(pl.Float64),
+        pl.col("duration_hour").cast(pl.Float64),
+        pl.col("gpu_count").cast(pl.Float64),
+        pl.col("average_gpu_utilization").cast(pl.Float64),
+        pl.col("average_gpu_memory").cast(pl.Float64),
+        pl.col("max_gpu_utilization").cast(pl.Float64),
+        pl.col("max_gpu_memory").cast(pl.Float64),
+    )
+    return new_df

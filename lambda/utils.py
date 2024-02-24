@@ -111,22 +111,6 @@ def remove_project_tags(
         run.tags = new_tags
         run.update()
 
-
-def set_schema(df: pl.DataFrame) -> pl.DataFrame:
-    """Dataframeのdata型をcastする"""
-    new_df = df.with_columns(
-        pl.col("run_id").cast(pl.String),
-        pl.col("assigned_gpu_node").cast(pl.Float64),
-        pl.col("duration_hour").cast(pl.Float64),
-        pl.col("gpu_count").cast(pl.Float64),
-        pl.col("average_gpu_utilization").cast(pl.Float64),
-        pl.col("average_gpu_memory").cast(pl.Float64),
-        pl.col("max_gpu_utilization").cast(pl.Float64),
-        pl.col("max_gpu_memory").cast(pl.Float64),
-    )
-    return new_df
-
-
 def set_date(target_date: dt.date) -> tuple[dt.date, dt.datetime]:
     """更新時の日付をsetする"""
     if target_date is None:
@@ -137,3 +121,4 @@ def set_date(target_date: dt.date) -> tuple[dt.date, dt.datetime]:
             target_date + dt.timedelta(days=1), dt.time()
         )
     return target_date, processed_at
+
