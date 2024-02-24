@@ -146,7 +146,6 @@ def update_artifacts(
                 .sort(["date"], descending=True)
                 .sort(["company_name"])
             )
-            assert len(all_runs_df["testmode"]) != 1, f"Testmode not matched."
             assert len(all_runs_df) >= len(
                 old_runs_df
             ), f"!!! Data length error !!! all: {len(all_runs_df)}, old: {len(old_runs_df)}"
@@ -165,5 +164,5 @@ def update_artifacts(
         )
         artifact.add_file(local_path=csv_path)
         run.log_artifact(artifact)
-        num_diff_records = len(all_runs_df) - len(old_runs_df)
-        return {"num_diff_records": num_diff_records}
+        new_records = len(all_runs_df) - len(old_runs_df)
+        return {"new_records": new_records}
