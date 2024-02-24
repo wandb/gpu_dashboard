@@ -70,22 +70,24 @@ def handler(event: dict[str, str], context: object) -> None:
         print("No runs found")
         new_runs_df = pl.DataFrame()
     else:
-        print(f"{len(df_list)} runs found.")
         new_runs_df = pl.concat(df_list)
+        print(f"{len(new_runs_df)} runs found.")
 
     ### Update artifacts
+    end_time = time.time()
+    elapsed_time = "{} min {} sec".format(
+        int((end_time - start_time) // 60), int((end_time - start_time) % 60)
+    )
     result: dict = update_artifacts(
         new_runs_df=new_runs_df,
         target_date=target_date,
         path_to_dashboard=config.path_to_dashboard,
+        elapsed_time=elapsed_time,
         testmode=config.testmode,
     )
     ### Add summary
-    end_time = time.time()
+    result["elapsed_time"] = elapsed_time
     result["target_date"] = target_date_str
-    result["elapsed_time"] = "{} min {} sec".format(
-        int((end_time - start_time) // 60), int((end_time - start_time) % 60)
-    )
     result["testmode"] = config.testmode
     print(result)
     return {"statusCode": 200, "body": json.dumps(result)}

@@ -63,7 +63,9 @@ def pipeline(
                 pl.lit(None).cast(pl.Float64).alias("max_gpu_memory"),
             )
         else:
-            _new_run_df: pl.Dataframe = duration_df.join(metrics_df, on=["date"], how="left")
+            _new_run_df: pl.Dataframe = duration_df.join(
+                metrics_df, on=["date"], how="left"
+            )
         new_run_df: pl.Dataframe = _new_run_df.with_columns(
             pl.lit(run_info.company_name).cast(pl.String).alias("company_name"),
             pl.lit(run_info.project).cast(pl.String).alias("project"),
@@ -105,7 +107,11 @@ def pipeline(
 
 
 def update_artifacts(
-    new_runs_df: pl.DataFrame, target_date: dt.date, path_to_dashboard: EasyDict, testmode: bool
+    new_runs_df: pl.DataFrame,
+    target_date: dt.date,
+    path_to_dashboard: EasyDict,
+    elapsed_time: str,
+    testmode: bool,
 ) -> dict:
     """今日取得したrunと過去に取得したrunをconcatしてartifactsをupdateする"""
     target_date_str = target_date.strftime("%Y-%m-%d")
@@ -160,7 +166,11 @@ def update_artifacts(
         artifact = wandb.Artifact(
             name=path_to_dashboard.artifact_name,
             type="dataset",
-            metadata={"version": target_date_str, "testmode": testmode},
+            metadata={
+                "version": target_date_str,
+                "elapsed_time": elapsed_time,
+                "testmode": testmode,
+            },
         )
         artifact.add_file(local_path=csv_path)
         run.log_artifact(artifact)

@@ -196,7 +196,8 @@ def get_metrics(
     if len(metrics_df) <= 1:
         return pl.DataFrame()
     daily_metrics_df = (
-        metrics_df.select(
+        metrics_df.lazy()
+        .select(
             "_timestamp",
             gpu_ptn := ("^system\.gpu\.\d+\.gpu$"),
             memory_ptn := ("^system\.gpu\.\d+\.memory$"),
@@ -205,10 +206,6 @@ def get_metrics(
             pl.col("_timestamp")
             .map_elements(lambda x: dt.datetime.fromtimestamp(x))
             .alias("datetime")
-        )
-        .filter(
-            pl.col("datetime")
-            <= dt.datetime.combine(target_date + dt.timedelta(days=1), dt.time())
         )
         .with_columns(pl.col("datetime").dt.date().alias("date"))
         .melt(
@@ -227,6 +224,7 @@ def get_metrics(
             .map_elements(lambda x: (max(x) - min(x)) / 60**2)
             .alias("metrics_hours"),
         )
+        .collect()
         .pivot(index="date", columns="gpu", values=["average", "max"])
         .rename(
             {
