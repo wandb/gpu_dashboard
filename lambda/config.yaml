@@ -3,7 +3,8 @@ environ:
   WANDB_DATA_DIR: "/tmp"
   WANDB_DIR: "/tmp"
 
-testmode: true
+testmode: false
+# testmode: true
 ignore_tag: xyz
 
 companies:

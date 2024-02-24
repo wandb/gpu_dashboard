@@ -17,12 +17,12 @@ def pipeline(
 ) -> pl.DataFrame:
     ### GPUスケジュール
     print(f"  Processing {company_name} ...")
+    if target_date < min(pl.DataFrame(gpu_schedule)["date"].cast(pl.Date)):
+        print("    Not started.")
+        return pl.DataFrame()
     gpu_schedule_df = get_gpu_schedule(
         gpu_schedule=gpu_schedule, target_date=target_date
     )
-    if target_date < min(gpu_schedule_df["date"]):
-        print("    Not started.")
-        return pl.DataFrame()
     ### Run取得
     runs_info = fetch_runs(
         company_name=company_name,
@@ -51,7 +51,16 @@ def pipeline(
             run_id=run_info.run_id,
         )
         # Join
-        new_run_df = duration_df.join(metrics_df, on=["date"], how="left").with_columns(
+        if metrics_df.is_empty():
+            _new_run_df = duration_df.with_columns(
+                pl.lit(None).alias("average_gpu_utilization"),
+                pl.lit(None).alias("max_gpu_utilization"),
+                pl.lit(None).alias("average_gpu_memory"),
+                pl.lit(None).alias("max_gpu_memory"),
+            )
+        else:
+            _new_run_df = duration_df.join(metrics_df, on=["date"], how="left")
+        new_run_df = _new_run_df.with_columns(
             pl.lit(run_info.company_name).alias("company_name"),
             pl.lit(run_info.project).alias("project"),
             pl.lit(run_info.run_id).alias("run_id"),
