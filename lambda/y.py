@@ -189,7 +189,7 @@ def update_tables(
         all_runs_df = read_table_csv(
             run=run, wandb_dir=wandb_dir, artifact_name=path_to_dashboard.artifact_name
         )
-    # Daily summary
+    # Daily summary TODO Runがない日の補完
     daily_summary_df = daily_summarize(df=all_runs_df)
     for company_name in daily_summary_df["company_name"].unique():
         company_df = daily_summary_df.filter(pl.col("company_name") == company_name)
