@@ -9,7 +9,7 @@ path_to_dashboard:
   project: test-gpu-dashboard # for test
   # artifact_name: gpu-usage
   # artifact_name: test-gpu-usage # for test
-  artifact_name: test2 # for test
+  artifact_name: final_test # for test
 
 companies:
   - company_name: stockmark-geniac # Stockmark

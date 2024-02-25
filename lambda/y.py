@@ -15,6 +15,8 @@ from z import (
     read_table_csv,
     daily_summarize,
     set_schema,
+    get_whole_gpu_schedule,
+    monthly_summarize,
 )
 
 
@@ -139,7 +141,9 @@ def update_artifacts(
         if exist:
             # 過去のrunを取得
             old_runs_df = read_table_csv(
-                run=run, wandb_dir=wandb_dir, artifact_name=path_to_dashboard.artifact_name
+                run=run,
+                wandb_dir=wandb_dir,
+                artifact_name=path_to_dashboard.artifact_name,
             )
             # concatして重複するrunを除外
             all_runs_df = (
@@ -177,33 +181,113 @@ def update_artifacts(
 
 
 def update_tables(
-    wandb_dir: str, path_to_dashboard: EasyDict, target_date_str: str
+    wandb_dir: str,
+    companies_config: list[EasyDict],
+    path_to_dashboard: EasyDict,
+    target_date: dt.date,
 ) -> list[pl.DataFrame]:
-    #Fetch csv
+    ### Fetch csv
     with wandb.init(
         entity=path_to_dashboard.entity,
         project=path_to_dashboard.project,
-        name=f"Read_{target_date_str}",
+        name=f"Read_{target_date.strftime('%Y-%m-%d')}",
         job_type="read-table",
     ) as run:
         all_runs_df = read_table_csv(
             run=run, wandb_dir=wandb_dir, artifact_name=path_to_dashboard.artifact_name
         )
-    # Daily summary TODO Runがない日の補完
+    ### Source of tables
+    daily_df = get_whole_gpu_schedule(
+        companies_config=companies_config, target_date=target_date
+    ).filter(pl.col("date") <= target_date)
+    if daily_df.is_empty():
+        return {"message": "Not started yet."}
+    ### Update tables
+    target_date_str = target_date.strftime("%Y-%m-%d")
+    # Monthly tables
+    with wandb.init(
+        entity=path_to_dashboard.entity,
+        project=path_to_dashboard.project,
+        name=f"Tables_{target_date_str}",
+        job_type="update-table",
+        tags=["overall", "latest"],
+    ) as run:
+        monthly_export_df = monthly_summarize(
+            df=all_runs_df, companies_config=companies_config, target_date=target_date
+        )
+        wandb.log(
+            {"monthly_gpu_usage": wandb.Table(data=monthly_export_df.to_pandas())}
+        )
+    return {}
+    ###
+    ###
+    # Daily tables
     daily_summary_df = daily_summarize(df=all_runs_df)
-    for company_name in daily_summary_df["company_name"].unique():
-        company_df = daily_summary_df.filter(pl.col("company_name") == company_name)
+    for company_name in daily_df["company_name"].unique():
+        __daily_export_df = daily_df.filter(
+            pl.col("company_name") == company_name
+        )  # Basis
+        company_df = daily_summary_df.filter(
+            pl.col("company_name") == company_name
+        )  # Records
+        if company_df.is_empty():
+            _daily_export_df = __daily_export_df.with_columns(
+                pl.lit(0).cast(pl.Float64).alias("n_runs"),
+                (pl.col("assigned_gpu_node") * 24 * 8)
+                .cast(pl.Float64)
+                .alias("assigned_gpu_hour"),
+                pl.lit(0).cast(pl.Float64).alias("duration_hour"),
+                pl.lit(0).cast(pl.Float64).alias("total_gpu_hour"),
+                pl.lit(0).cast(pl.Float64).alias("utilization_rate"),
+                pl.lit(None).cast(pl.Float64).alias("average_gpu_utilization"),
+                pl.lit(None).cast(pl.Float64).alias("max_gpu_utilization"),
+                pl.lit(None).cast(pl.Float64).alias("average_gpu_memory"),
+                pl.lit(None).cast(pl.Float64).alias("max_gpu_memory"),
+            )
+        else:
+            _daily_export_df = __daily_export_df.join(
+                company_df,
+                on=["date", "company_name"],
+                how="left",
+            ).with_columns(
+                (pl.col("assigned_gpu_node") * 24 * 8)
+                .cast(pl.Float64)
+                .alias("assigned_gpu_hour"),
+            )
+        # Export
+        daily_export_df = _daily_export_df.select(
+            pl.col("date").dt.strftime("%Y-%m-%d").alias("date"),
+            "company_name",
+            pl.col("assigned_gpu_node"),
+            pl.col("assigned_gpu_hour"),
+            pl.col("n_runs").fill_null(0),
+            pl.col("duration_hour").fill_null(0),
+            pl.col("total_gpu_hour").fill_null(0),
+            pl.col("utilization_rate").fill_null(0),
+            "average_gpu_utilization",
+            "max_gpu_utilization",
+            "average_gpu_memory",
+            "max_gpu_memory",
+        ).sort("date", descending=True)
         with wandb.init(
             entity=path_to_dashboard.entity,
             project=path_to_dashboard.project,
             name=f"Tables_{target_date_str}",
             job_type="update-table",
-            tags=[company_name, "latest"]
+            tags=[company_name, "latest"],
         ) as run:
-            wandb.log({"company_daily_gpu_usage": wandb.Table(data=company_df.to_pandas())})
+            wandb.log(
+                {
+                    "company_daily_gpu_usage": wandb.Table(
+                        data=daily_export_df.to_pandas()
+                    ),
+                    "company_daily_gpu_usage_within_30_days": wandb.Table(
+                        data=daily_export_df.head(30).to_pandas()
+                    ),
+                }
+            )
     # Overall summary
     return {}
-
 
 
 # ### Utils
