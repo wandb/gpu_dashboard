@@ -373,8 +373,10 @@ def monthly_summarize(
         )
         .group_by("year_month", "company_name")
         .agg(
-            pl.col("assigned_gpu_node").sum().mul(8 * 24).alias("assigned_gpu_hour"),
+            pl.col("assigned_gpu_node").sum(),
             pl.col("date").count().alias("days"),
+        ).with_columns(
+            pl.col("assigned_gpu_node").mul(8 * 24).alias("assigned_gpu_hour"),
         )
     )
 
@@ -445,6 +447,7 @@ def monthly_summarize(
             "n_runs",
             "duration_hour",
             "total_gpu_hour",
+            "assigned_gpu_node",
             "assigned_gpu_hour",
             "utilization_rate",
             "average_gpu_utilization",

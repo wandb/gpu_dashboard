@@ -212,13 +212,48 @@ def update_tables(
         job_type="update-table",
         tags=["overall", "latest"],
     ) as run:
-        monthly_export_df = monthly_summarize(
-            df=all_runs_df, companies_config=companies_config, target_date=target_date
+        gpu_schedule_df = (
+            get_whole_gpu_schedule(
+                companies_config=companies_config, target_date=target_date
+            )
+            .with_columns(
+                pl.col("date").dt.strftime("%Y-%m").alias("year_month"),
+                pl.col("date").min().alias("start_date"),
+            )
+            .group_by("year_month", "company_name")
+            .agg(
+                pl.col("assigned_gpu_node").sum(),
+                pl.col("date").count().alias("days"),
+            )
+            .with_columns(
+                pl.col("assigned_gpu_node").mul(8 * 24).alias("assigned_gpu_hour"),
+            )
+        )
+        _monthly_export_df = monthly_summarize(
+            df=all_runs_df,
+            companies_config=companies_config,
+            target_date=target_date,
+        ).drop("assigned_gpu_node", "assigned_gpu_hour", "days")
+        # join
+        monthly_export_df = gpu_schedule_df.join(
+            _monthly_export_df, on=["year_month", "company_name"], how="left"
+        ).select(
+            "year_month",
+            "company_name",
+            "assigned_gpu_node",
+            "assigned_gpu_hour",
+            "n_runs",
+            "duration_hour",
+            "total_gpu_hour",
+            "utilization_rate",
+            "average_gpu_utilization",
+            "max_gpu_utilization",
+            "average_gpu_memory",
+            "max_gpu_memory",
         )
         wandb.log(
             {"monthly_gpu_usage": wandb.Table(data=monthly_export_df.to_pandas())}
         )
-    return {}
     ###
     ###
     # Daily tables
@@ -288,43 +323,3 @@ def update_tables(
             )
     # Overall summary
     return {}
-
-
-# ### Utils
-# def log_to_wandb(
-#     path_to_dashboard: EasyDict,
-#     run_name: str,
-#     tables: dict[str, pl.DataFrame],
-#     tags: list[str],
-# ) -> None:
-#     """Tableをwandbに出力する"""         # 時差を考慮
-#     assert wandb.Api().default_entity == entity
-#     config = dict(
-#         entity=path_to_dashboard.entity,
-#         project=path_to_dashboard.project,
-#         name=run_name,
-#         tags=tags,
-#     )
-#     with wandb.init(**config) as run:
-#         for tbl_name, df in tables.items():
-#             wandb.log({tbl_name: wandb.Table(data=df.to_pandas())})
-#     return None
-
-
-# def download_artifacts(path_to_dashboard: EasyDict) -> pl.DataFrame:
-#     artifact = run.use_artifact(f"{path_to_dashboard.artifact_name}:latest")
-#     artifact.download("/tmp")
-#     csv_path = Path(f"/tmp/{path_to_dashboard.artifact_name}.csv")
-#     old_runs_df = pl.from_pandas(
-#         pd.read_csv(
-#             csv_path,
-#             parse_dates=["created_at", "updated_at", "logged_at"],
-#             date_format="ISO8601",
-#         )
-#     ).with_columns(
-#         pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
-#         pl.col("created_at").cast(pl.Datetime("us")),
-#         pl.col("updated_at").cast(pl.Datetime("us")),
-#         pl.col("logged_at").cast(pl.Datetime("us")),
-#     )
-#     return

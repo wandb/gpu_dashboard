@@ -49,59 +49,56 @@ def handler(event: dict[str, str], context: object) -> None:
     # Check
     print(f"Target date: {target_date}")
 
-    #-------------# 
+    # -------------#
     # Update data #
-    #-------------# 
-    # ### Get new runs
-    # df_list = []
-    # company_config: EasyDict
-    # for company_config in tqdm(config.companies):
-    #     if (config.testmode) & (len(df_list) == 2):
-    #         continue
-    #     company_runs_df: pl.DataFrame = pipeline(
-    #         company_name=company_config.company_name,
-    #         gpu_schedule=company_config.schedule,
-    #         target_date=target_date,
-    #         logged_at=dt.datetime.now(),
-    #         ignore_tag=config.ignore_tag,
-    #         testmode=config.testmode,
-    #     )
-    #     if company_runs_df.is_empty():
-    #         continue
-    #     df_list.append(company_runs_df)
-    # if not df_list:
-    #     print("No runs found")
-    #     new_runs_df = pl.DataFrame()
-    # else:
-    #     new_runs_df = pl.concat(df_list)
-    #     print(f"{len(new_runs_df)} runs found.")
+    # -------------#
+    ### Get new runs
+    df_list = []
+    company_config: EasyDict
+    for company_config in tqdm(config.companies):
+        if (config.testmode) & (len(df_list) == 2):
+            continue
+        company_runs_df: pl.DataFrame = pipeline(
+            company_name=company_config.company_name,
+            gpu_schedule=company_config.schedule,
+            target_date=target_date,
+            logged_at=dt.datetime.now(),
+            ignore_tag=config.ignore_tag,
+            testmode=config.testmode,
+        )
+        if company_runs_df.is_empty():
+            continue
+        df_list.append(company_runs_df)
+    if not df_list:
+        print("No runs found")
+        new_runs_df = pl.DataFrame()
+    else:
+        new_runs_df = pl.concat(df_list)
+        print(f"{len(new_runs_df)} runs found.")
 
-    # ### Update artifacts
-    # end_time1 = time.time()
-    # elapsed_time1 = "{} min {} sec".format(
-    #     int((end_time1 - start_time) // 60), int((end_time1 - start_time) % 60)
-    # )
-    # new_records: int = update_artifacts(
-    #     new_runs_df=new_runs_df,
-    #     target_date=target_date,
-    #     wandb_dir=config.wandb_dir,
-    #     path_to_dashboard=config.path_to_dashboard,
-    #     elapsed_time=elapsed_time1,
-    #     testmode=config.testmode,
-    # )
-    # ### Add summary
-    # result = {}
-    # result["target_date"] = target_date_str
-    # result["new_records"] = new_records
-    # result["elapsed_time1"] = elapsed_time1
-    # result["testmode"] = config.testmode
-    # print(result)
+    ### Update artifacts
+    end_time1 = time.time()
+    elapsed_time1 = "{} min {} sec".format(
+        int((end_time1 - start_time) // 60), int((end_time1 - start_time) % 60)
+    )
+    new_records: int = update_artifacts(
+        new_runs_df=new_runs_df,
+        target_date=target_date,
+        wandb_dir=config.wandb_dir,
+        path_to_dashboard=config.path_to_dashboard,
+        elapsed_time=elapsed_time1,
+        testmode=config.testmode,
+    )
+    ### Add summary
+    result = {}
+    result["target_date"] = target_date_str
+    result["new_records"] = new_records
+    result["elapsed_time1"] = elapsed_time1
+    result["testmode"] = config.testmode
 
-    # return {"statusCode": 200, "body": json.dumps(result)}
-
-    #--------------# 
+    # --------------#
     # Update table #
-    #--------------# 
+    # --------------#
     ### Upate tables
     update_tables(
         wandb_dir=config.wandb_dir,
@@ -109,7 +106,7 @@ def handler(event: dict[str, str], context: object) -> None:
         path_to_dashboard=config.path_to_dashboard,
         target_date=target_date,
     )
-    return {"statusCode": 200, "body": json.dumps("OK")}
+    return {"statusCode": 200, "body": json.dumps(result)}
 
 
 if __name__ == "__main__":
