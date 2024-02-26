@@ -72,6 +72,9 @@ def fetch_runs(
         )
         run_edges = results.get("project").get("runs").get("edges")
         runs = [EasyDict(e.get("node")) for e in run_edges]
+        # if project_name == "gpu-dashboard":
+        #     print(len(runs))
+        #     exit()
         for run in runs:
             ### 日付
             createdAt = dt.datetime.fromisoformat(run.createdAt) + dt.timedelta(
@@ -109,6 +112,8 @@ def fetch_runs(
                 username=run.user.username,
                 gpu_name=run.runInfo.gpu,
                 gpu_count=run.runInfo.gpuCount,
+                # gpu_name="",
+                # gpu_count="",
                 state=run.state,
                 tags=run.tags,
             )
