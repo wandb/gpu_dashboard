@@ -14,7 +14,7 @@ QUERY = """\
 query GetGpuInfoForProject($project: String!, $entity: String!) {
     project(name: $project, entityName: $entity) {
         name
-        runs {
+        runs(first: 1000) {
             edges {
                 node {
                     name

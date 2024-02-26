@@ -37,7 +37,7 @@ def handler(event: dict[str, str], context: object) -> None:
     target_date: dt.date
     target_date_str = event.get("target_date")
     if target_date_str is None:
-        target_date = dt.date.today()
+        target_date = dt.date.today() + dt.timedelta(days=-1)
     else:
         try:
             target_date = dt.datetime.strptime(target_date_str, "%Y-%m-%d").date()
@@ -79,7 +79,7 @@ def handler(event: dict[str, str], context: object) -> None:
         entity=config.path_to_dashboard.entity,
         project=config.path_to_dashboard.project,
         delete_tags=config.tag_for_latest,
-        head=(len(config.companies) + 2) * 2, # +2はupdateとreadの分
+        head=(len(config.companies) + 2) * 2,  # +2はupdateとreadの分
     )
     ### Update artifacts
     end_time1 = time.time()
