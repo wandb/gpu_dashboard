@@ -1,5 +1,5 @@
 wandb_dir: "/tmp"
-ignore_tag: xyz
+ignore_tag: other_gpu
 tag_for_latest: latest
 testmode: false
 # testmode: true
