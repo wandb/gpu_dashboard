@@ -10,7 +10,7 @@ from tqdm import tqdm
 import wandb
 import yaml
 
-from y import pipeline, update_artifacts, update_tables
+from y import pipeline, update_artifacts, update_tables, remove_project_tags
 
 
 def handler(event: dict[str, str], context: object) -> None:
@@ -74,6 +74,13 @@ def handler(event: dict[str, str], context: object) -> None:
         new_runs_df = pl.concat(df_list)
         print(f"{len(new_runs_df)} runs found.")
 
+    ### Remove project tags
+    remove_project_tags(
+        entity=config.path_to_dashboard.entity,
+        project=config.path_to_dashboard.project,
+        delete_tags=config.tag_for_latest,
+        head=(len(config.companies) + 2) * 2, # +2はupdateとreadの分
+    )
     ### Update artifacts
     end_time1 = time.time()
     elapsed_time1 = "{} min {} sec".format(
@@ -104,7 +111,7 @@ def handler(event: dict[str, str], context: object) -> None:
         target_date=target_date,
         tag_for_latest=config.tag_for_latest,
     )
-    # return {"statusCode": 200, "body": json.dumps(result)}
+    return {"statusCode": 200, "body": json.dumps(result)}
 
 
 if __name__ == "__main__":
