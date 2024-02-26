@@ -166,7 +166,7 @@ def divide_duration_daily(
     minutes_range = (
         pl.datetime_range(
             start=start,
-            end=end + dt.timedelta(minutes=1),
+            end=end,
             interval="1m",
             eager=True,
         )
