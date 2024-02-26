@@ -169,7 +169,7 @@ def update_artifacts(
             name=path_to_dashboard.artifact_name,
             type="dataset",
             metadata={
-                "version": target_date_str,
+                "target_date": target_date_str,
                 "elapsed_time": elapsed_time,
                 "testmode": testmode,
             },

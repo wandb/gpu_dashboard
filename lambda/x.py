@@ -1,5 +1,4 @@
 import os
-import sys
 import argparse
 import datetime as dt
 import json
@@ -94,7 +93,6 @@ def handler(event: dict[str, str], context: object) -> None:
     result["new_records"] = new_records
     result["elapsed_time1"] = elapsed_time1
     result["testmode"] = config.testmode
-
     # --------------#
     # Update table #
     # --------------#
