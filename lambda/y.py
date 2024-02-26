@@ -185,6 +185,7 @@ def update_tables(
     companies_config: list[EasyDict],
     path_to_dashboard: EasyDict,
     target_date: dt.date,
+    tag_for_latest: str,
 ) -> list[pl.DataFrame]:
     ### Fetch csv
     with wandb.init(
@@ -210,7 +211,7 @@ def update_tables(
         project=path_to_dashboard.project,
         name=f"Tables_{target_date_str}",
         job_type="update-table",
-        tags=["overall", "latest"],
+        tags=["overall", tag_for_latest],
     ) as run:
         gpu_schedule_df = (
             get_whole_gpu_schedule(
@@ -309,14 +310,14 @@ def update_tables(
             project=path_to_dashboard.project,
             name=f"Tables_{target_date_str}",
             job_type="update-table",
-            tags=[company_name, "latest"],
+            tags=[company_name, tag_for_latest],
         ) as run:
             wandb.log(
                 {
                     "company_daily_gpu_usage": wandb.Table(
                         data=daily_export_df.to_pandas()
                     ),
-                    "company_daily_gpu_usage_within_30_days": wandb.Table(
+                    "company_daily_gpu_usage_within_30days": wandb.Table(
                         data=daily_export_df.head(30).to_pandas()
                     ),
                 }

@@ -1,5 +1,6 @@
 wandb_dir: "/tmp"
 ignore_tag: xyz
+tag_for_latest: latest
 testmode: false
 # testmode: true
 
@@ -34,7 +35,7 @@ companies:
         assigned_gpu_node: 35
   - company_name: nii-geniac # NII
     schedule:
-      - date: "2024-02-15"
+      - date: "2024-04-15"
         assigned_gpu_node: 75
   - company_name: team1 # Matsuo LB No.1
     schedule:
