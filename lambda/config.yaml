@@ -1,6 +1,8 @@
 wandb_dir: "/tmp"
 ignore_tag: other_gpu
-tag_for_latest: latest
+# tag_for_latest: latest
+tag_for_latest: api-version
+# tag_for_latest: gql-version
 testmode: false
 # testmode: true
 
@@ -11,6 +13,7 @@ path_to_dashboard:
   # artifact_name: gpu-usage
   # artifact_name: test-gpu-usage # for test
   artifact_name: new_logic_20240226 # for test
+  # artifact_name: api-version # for test
 
 companies:
   - company_name: stockmark-geniac # Stockmark
