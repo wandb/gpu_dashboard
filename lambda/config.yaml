@@ -12,8 +12,8 @@ path_to_dashboard:
   project: test-gpu-dashboard # for test
   # artifact_name: gpu-usage
   # artifact_name: test-gpu-usage # for test
-  artifact_name: new_logic_20240226 # for test
-  # artifact_name: api-version # for test
+  # artifact_name: new_logic_20240226 # for test
+  artifact_name: api-version # for test
 
 companies:
   - company_name: stockmark-geniac # Stockmark
