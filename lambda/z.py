@@ -11,6 +11,36 @@ from wandb_gql import gql
 from tqdm import tqdm
 
 
+QUERY = """\
+query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $cursor: String!) {
+    project(name: $project, entityName: $entity) {
+        name
+        runs(first: $first, after: $cursor) {
+            edges {
+                cursor
+                node {
+                    name
+                    user {
+                        username
+                    }
+                    computeSeconds
+                    createdAt
+                    updatedAt
+                    state
+                    tags
+                    systemMetrics
+                    runInfo {
+                        gpuCount
+                        gpu
+                    }
+                }
+            }
+        }
+    }
+}\
+"""
+
+
 @dataclass
 class RunInfo:
     company_name: str
@@ -18,11 +48,11 @@ class RunInfo:
     run_id: str
     created_at: dt.datetime
     updated_at: dt.datetime
-    tags: list[str]
-    gpu_name: str
     gpu_count: int
     state: str
+    # tags: list[str]
     # username: str
+    # gpu_name: str
 
 
 def fetch_runs(
@@ -36,62 +66,68 @@ def fetch_runs(
     ### Query
     api = wandb.Api()
     project_names = [p.name for p in api.projects(company_name)]
-    start_utc = dt.datetime.combine(target_date, dt.time()) + dt.timedelta(hours=-9)
-    end_utc = dt.datetime.combine(target_date, dt.time()) + dt.timedelta(
-        days=1, hours=-9
-    )
     ### Process
     runs_info = []
-    for project_name in tqdm(project_names):
-        print("    Project:", project_name)
+    for project_name in project_names:
+        ### skip
         if (ignore_project is not None) & (project_name == ignore_project):
             continue
         if (testmode) & (len(runs_info) == 2):
             continue
-        path = f"{company_name}/{project_name}"
-        filters = {
-            "$and": [
-                # 今日更新されたrun
-                {"updated_at": {"$gte": start_utc.isoformat()}},
-                # 未来のrunは無視
-                {"created_at": {"$lt": end_utc.isoformat()}},
-                # # 無視するタグを指定
-                # {"tags": {"$nin": ["ignore_tag"]}},
-            ]
-        }
-        runs = api.runs(path=path, filters=filters)
-        for run in tqdm(runs):
-            ### 日付
-            created_at = dt.datetime.fromisoformat(run.created_at) + dt.timedelta(
-                hours=9
-            )  # 時差
-            updated_at = dt.datetime.fromisoformat(run.heartbeat_at) + dt.timedelta(
-                hours=9
-            )  # 時差
-
+        ### Query
+        cursor = ""
+        runs = []
+        while True:
+            results = api.client.execute(
+                gql(QUERY),
+                {
+                    "project": project_name,
+                    "entity": company_name,
+                    "first": 1000,
+                    "cursor": cursor,
+                },
+            )
+            _edges = results["project"]["runs"]["edges"]
+            if not _edges:
+                # 空っぽなら終了
+                break
+            runs += [EasyDict(e["node"]) for e in _edges]
+            cursor = _edges[-1]["cursor"]
+            print(len(runs), "runs found.")
+        for run in runs:
+            ### 日付（時差を考慮）
+            createdAt = dt.datetime.fromisoformat(run.createdAt) + dt.timedelta(hours=9)
+            updatedAt = dt.datetime.fromisoformat(run.updatedAt) + dt.timedelta(hours=9)
             ### Skip
-            if not bool(run.metadata):
-                print("Metadata not found.")
+            if not run.get("runInfo"):
                 continue
-            if not run.metadata.get("gpu"):
+            if not run.get("runInfo").get("gpu"):
                 continue
-            if created_at.timestamp() == updated_at.timestamp():
+            if createdAt.timestamp() == updatedAt.timestamp():
                 # 即終了
+                continue
+            if target_date > updatedAt.date():
+                # 昨日以前に終了したものはスキップ
+                continue
+            if target_date < createdAt.date():
+                # 未来のものはスキップ
+                continue
+            if ignore_tag in run.tags:
+                # 特定のtagをスキップ
                 continue
 
             ### データ追加
             run_info = RunInfo(
                 company_name=company_name,
                 project=project_name,
-                run_id=run.id,
-                created_at=created_at,
-                updated_at=updated_at,
-                tags=run.tags,
-                gpu_name=run.metadata["gpu"],
-                gpu_count=run.metadata["gpu_count"],
+                run_id=run.name,
+                created_at=createdAt,
+                updated_at=updatedAt,
+                gpu_count=run.runInfo.gpuCount,
                 state=run.state,
-                # gpu_name=run.runInfo.gpu,
-                # gpu_count=run.runInfo.gpuCount,
+                # username=run.user.username,
+                # gpu_name="",
+                # tags=run.tags,
             )
             runs_info.append(run_info)
     return runs_info
@@ -187,7 +223,7 @@ def get_metrics(
     run_path = ("/").join((company_name, project, run_id))
     api = wandb.Api()
     run = api.run(path=run_path)
-    metrics_df = pl.from_dataframe(run.history(stream="events"))
+    metrics_df = pl.from_dataframe(run.history(stream="events", samples=100))
     ### Process
     if len(metrics_df) <= 1:
         return pl.DataFrame()

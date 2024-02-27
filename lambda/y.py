@@ -30,7 +30,8 @@ def pipeline(
     testmode: bool,
 ) -> pl.DataFrame:
     ### GPUスケジュール
-    print(f"  Processing {company_name} ...")
+    print()
+    print(f"Processing {company_name} ...")
     if target_date < min(pl.DataFrame(gpu_schedule)["date"].cast(pl.Date)):
         print("    Not started.")
         return pl.DataFrame()
