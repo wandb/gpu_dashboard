@@ -1,7 +1,7 @@
 wandb_dir: "/tmp"
 ignore_tag: other_gpu
+tag_for_latest: version_20240227
 # tag_for_latest: latest
-tag_for_latest: api-version
 # tag_for_latest: gql-version
 testmode: false
 # testmode: true
@@ -10,22 +10,23 @@ path_to_dashboard:
   entity: geniac-gpu
   # project: gpu-dashboard
   project: test-gpu-dashboard # for test
+  artifact_name: version_20240227
   # artifact_name: gpu-usage
   # artifact_name: test-gpu-usage # for test
   # artifact_name: new_logic_20240226 # for test
-  artifact_name: api-version # for test
 
 companies:
   - company_name: stockmark-geniac # Stockmark
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
-      # - date: "2024-02-19"  # for test
-        # assigned_gpu_node: 40
+    ignore_project: 100b
   - company_name: abeja-geniac # ABEJA
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
+      ## - date: "2024-02-19"  # for test
+        ## assigned_gpu_node: 40
   - company_name: pfe-geniac # PFE
     schedule:
       - date: "2024-02-15"

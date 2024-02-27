@@ -60,6 +60,8 @@ def handler(event: dict[str, str], context: object) -> None:
             company_name=company_config.company_name,
             gpu_schedule=company_config.schedule,
             target_date=target_date,
+            ignore_project=company_config.get("ignore_project"),
+            # ignore_project=None, # for test
             logged_at=dt.datetime.now(),
             ignore_tag=config.ignore_tag,
             testmode=config.testmode,

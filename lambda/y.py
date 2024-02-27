@@ -25,6 +25,7 @@ def pipeline(
     gpu_schedule: list[EasyDict],
     target_date: dt.date,
     logged_at: dt.datetime,
+    ignore_project: str,
     ignore_tag: str,
     testmode: bool,
 ) -> pl.DataFrame:
@@ -40,6 +41,7 @@ def pipeline(
     runs_info = fetch_runs(
         company_name=company_name,
         target_date=target_date,
+        ignore_project=ignore_project,
         ignore_tag=ignore_tag,
         testmode=testmode,
     )
@@ -276,6 +278,7 @@ def update_tables(
                 pl.lit(0).cast(pl.Float64).alias("duration_hour"),
                 pl.lit(0).cast(pl.Float64).alias("total_gpu_hour"),
                 pl.lit(0).cast(pl.Float64).alias("utilization_rate"),
+                pl.lit(0).cast(pl.Float64).alias("no_cap_utilization_rate"),
                 pl.lit(None).cast(pl.Float64).alias("average_gpu_utilization"),
                 pl.lit(None).cast(pl.Float64).alias("max_gpu_utilization"),
                 pl.lit(None).cast(pl.Float64).alias("average_gpu_memory"),
@@ -303,6 +306,7 @@ def update_tables(
             pl.col("max_gpu_memory").alias("最大GPUメモリ利用率(%)"),
             pl.col("n_runs").fill_null(0),
             pl.col("duration_hour").fill_null(0),
+            pl.col("no_cap_utilization_rate").fill_null(0),
             pl.col("assigned_gpu_node"),
             pl.col("assigned_gpu_hour"),
         ).sort("日付", descending=True)
@@ -313,6 +317,14 @@ def update_tables(
             job_type="update-table",
             tags=[company_name, tag_for_latest],
         ) as run:
+            over_100_df = daily_export_df.filter(pl.col("no_cap_utilization_rate") > 100)
+            if not over_100_df.is_empty():
+                alert_text = str(over_100_df.to_pandas().to_dict(orient="records"))
+                print(alert_text)
+                wandb.alert(
+                    title="Utilization rate too high",
+                    text=alert_text,
+                )
             wandb.log(
                 {
                     "company_daily_gpu_usage": wandb.Table(

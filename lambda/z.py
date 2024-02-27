@@ -8,35 +8,7 @@ import pandas as pd
 import polars as pl
 import wandb
 from wandb_gql import gql
-
-### gqlのクエリ
-QUERY = """\
-query GetGpuInfoForProject($project: String!, $entity: String!) {
-    project(name: $project, entityName: $entity) {
-        name
-        runs(first: 1000) {
-            edges {
-                node {
-                    name
-                    user {
-                        username
-                    }
-                    computeSeconds
-                    createdAt
-                    updatedAt
-                    state
-                    tags
-                    systemMetrics
-                    runInfo {
-                        gpuCount
-                        gpu
-                    }
-                }
-            }
-        }
-    }
-}\
-"""
+from tqdm import tqdm
 
 
 @dataclass
@@ -46,76 +18,80 @@ class RunInfo:
     run_id: str
     created_at: dt.datetime
     updated_at: dt.datetime
-    username: str
     tags: list[str]
     gpu_name: str
     gpu_count: int
     state: str
+    # username: str
 
 
 def fetch_runs(
-    company_name: str, target_date: dt.date, ignore_tag: str, testmode: bool
+    company_name: str,
+    target_date: dt.date,
+    ignore_project: str,
+    ignore_tag: str,
+    testmode: bool,
 ) -> list[RunInfo]:
     """entityごとにGPUを使用しているrunsのデータを取得する"""
     ### Query
     api = wandb.Api()
     project_names = [p.name for p in api.projects(company_name)]
-    gpu_info_query = gql(QUERY)
-
+    start_utc = dt.datetime.combine(target_date, dt.time()) + dt.timedelta(hours=-9)
+    end_utc = dt.datetime.combine(target_date, dt.time()) + dt.timedelta(
+        days=1, hours=-9
+    )
     ### Process
     runs_info = []
-    for project_name in project_names:
+    for project_name in tqdm(project_names):
+        print("    Project:", project_name)
+        if (ignore_project is not None) & (project_name == ignore_project):
+            continue
         if (testmode) & (len(runs_info) == 2):
             continue
-        results = api.client.execute(
-            gpu_info_query, {"project": project_name, "entity": company_name}
-        )
-        run_edges = results.get("project").get("runs").get("edges")
-        runs = [EasyDict(e.get("node")) for e in run_edges]
-        # if project_name == "gpu-dashboard":
-        #     print(len(runs))
-        #     exit()
-        for run in runs:
+        path = f"{company_name}/{project_name}"
+        filters = {
+            "$and": [
+                # 今日更新されたrun
+                {"updated_at": {"$gte": start_utc.isoformat()}},
+                # 未来のrunは無視
+                {"created_at": {"$lt": end_utc.isoformat()}},
+                # # 無視するタグを指定
+                # {"tags": {"$nin": ["ignore_tag"]}},
+            ]
+        }
+        runs = api.runs(path=path, filters=filters)
+        for run in tqdm(runs):
             ### 日付
-            createdAt = dt.datetime.fromisoformat(run.createdAt) + dt.timedelta(
+            created_at = dt.datetime.fromisoformat(run.created_at) + dt.timedelta(
                 hours=9
             )  # 時差
-            updatedAt = dt.datetime.fromisoformat(run.updatedAt) + dt.timedelta(
+            updated_at = dt.datetime.fromisoformat(run.heartbeat_at) + dt.timedelta(
                 hours=9
             )  # 時差
 
             ### Skip
-            if not run.get("runInfo"):
+            if not bool(run.metadata):
+                print("Metadata not found.")
                 continue
-            if not run.get("runInfo").get("gpu"):
+            if not run.metadata.get("gpu"):
                 continue
-            if createdAt.timestamp() == updatedAt.timestamp():
+            if created_at.timestamp() == updated_at.timestamp():
                 # 即終了
-                continue
-            if target_date > updatedAt.date():
-                # 昨日以前に終了したものはスキップ
-                continue
-            if target_date < createdAt.date():
-                # 未来のものはスキップ
-                continue
-            if ignore_tag in run.tags:
-                # 特定のtagをスキップ
                 continue
 
             ### データ追加
             run_info = RunInfo(
                 company_name=company_name,
                 project=project_name,
-                run_id=run.name,
-                created_at=createdAt,
-                updated_at=updatedAt,
-                username=run.user.username,
-                gpu_name=run.runInfo.gpu,
-                gpu_count=run.runInfo.gpuCount,
-                # gpu_name="",
-                # gpu_count="",
-                state=run.state,
+                run_id=run.id,
+                created_at=created_at,
+                updated_at=updated_at,
                 tags=run.tags,
+                gpu_name=run.metadata["gpu"],
+                gpu_count=run.metadata["gpu_count"],
+                state=run.state,
+                # gpu_name=run.runInfo.gpu,
+                # gpu_count=run.runInfo.gpuCount,
             )
             runs_info.append(run_info)
     return runs_info
@@ -342,7 +318,14 @@ def daily_summarize(df: pl.DataFrame) -> pl.DataFrame:
         .with_columns(
             (
                 pl.col("total_gpu_hour").truediv(pl.col("assigned_gpu_hour")).mul(100)
-            ).alias("utilization_rate"),
+            ).alias("no_cap_utilization_rate"),
+        )
+        .with_columns(
+            # 100超えていたらcapする
+            pl.when(pl.col("no_cap_utilization_rate") > 100)
+            .then(100)
+            .otherwise(pl.col("no_cap_utilization_rate"))
+            .alias("utilization_rate"),
         )
         .join(metrics_duraion_df, on=["date", "company_name"])
         .sort(["date"], descending=True)
@@ -354,6 +337,7 @@ def daily_summarize(df: pl.DataFrame) -> pl.DataFrame:
             "duration_hour",
             "total_gpu_hour",
             "utilization_rate",
+            "no_cap_utilization_rate",
             "average_gpu_utilization",
             "max_gpu_utilization",
             "average_gpu_memory",
@@ -380,7 +364,8 @@ def monthly_summarize(
         .agg(
             pl.col("assigned_gpu_node").sum(),
             pl.col("date").count().alias("days"),
-        ).with_columns(
+        )
+        .with_columns(
             pl.col("assigned_gpu_node").mul(8 * 24).alias("assigned_gpu_hour"),
         )
     )
