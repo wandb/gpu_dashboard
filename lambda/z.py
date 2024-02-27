@@ -499,3 +499,24 @@ def set_schema(df: pl.DataFrame) -> pl.DataFrame:
         pl.col("max_gpu_memory").cast(pl.Float64),
     )
     return new_df
+
+def remove() -> dict[str, int]:
+    entity, project = "geniac-gpu", "test-gpu-dashboard"
+    tag_for_latest = "version_20240227"
+    api = wandb.Api()
+    project_path = "/".join((entity, project))
+    runs = api.runs(path=project_path)
+    run_paths = ("/".join((project_path, run.id)) for run in runs)
+    n_deleted = 0
+    while True:
+        run_path = run_paths.__next__()
+        run = api.run(path=run_path)
+        old_tags = run.tags
+        if tag_for_latest in old_tags:
+            new_tags = [tag for tag in old_tags if tag not in tag_for_latest]
+            run.tags = new_tags
+            run.update()
+            n_deleted += 1
+        else:
+            break
+    return {"n_deleted": n_deleted}
