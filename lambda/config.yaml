@@ -1,7 +1,7 @@
 wandb_dir: "/tmp"
 ignore_tag: other_gpu
-tag_for_latest: version_20240227
-# tag_for_latest: latest
+tag_for_latest: latest
+# tag_for_latest: version_20240227
 # tag_for_latest: gql-version
 testmode: false
 # testmode: true

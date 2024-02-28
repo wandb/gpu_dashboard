@@ -318,7 +318,6 @@ def update_tables(
             .sort("企業名")
         )
         print(monthly_export_df)
-        monthly_export_df.to_pandas().to_csv("monthly_gpu_usage.csv", index=False)
         wandb.log(
             {"monthly_gpu_usage": wandb.Table(data=monthly_export_df.to_pandas())}
         )
