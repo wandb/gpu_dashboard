@@ -17,6 +17,7 @@ from z import (
     set_schema,
     get_whole_gpu_schedule,
     monthly_summarize,
+    overall_summarize,
 )
 
 
@@ -208,7 +209,7 @@ def update_tables(
         return {"message": "Not started yet."}
     ### Update tables
     target_date_str = target_date.strftime("%Y-%m-%d")
-    # Monthly tables
+    # Monthly and overall tables
     with wandb.init(
         entity=path_to_dashboard.entity,
         project=path_to_dashboard.project,
@@ -216,6 +217,56 @@ def update_tables(
         job_type="update-table",
         tags=["overall", tag_for_latest],
     ) as run:
+        ### Overall tables
+        gpu_schedule_df = (
+            get_whole_gpu_schedule(
+                companies_config=companies_config, target_date=target_date
+            )
+            .with_columns(
+                pl.col("date").min().alias("start_date"),
+            )
+            .group_by("company_name")
+            .agg(
+                pl.col("assigned_gpu_node").sum(),
+                pl.col("date").count().alias("days"),
+            )
+            .with_columns(
+                pl.col("assigned_gpu_node").mul(8 * 24).alias("assigned_gpu_hour"),
+            )
+        )
+        _overall_export_df = overall_summarize(
+            df=all_runs_df,
+            companies_config=companies_config,
+            target_date=target_date,
+        ).drop("assigned_gpu_node", "assigned_gpu_hour", "days")
+        # join
+        overall_export_df = (
+            gpu_schedule_df.join(_overall_export_df, on=["company_name"], how="left")
+            .select(
+                pl.col("company_name").alias("企業名"),
+                pl.col("total_gpu_hour").fill_null(0).alias("合計GPU使用時間"),
+                pl.col("utilization_rate").fill_null(0).alias("GPU稼働率(%)"),
+                pl.col("average_gpu_utilization")
+                .fill_null(0)
+                .alias("平均GPUパフォーマンス率(%)"),
+                pl.col("max_gpu_utilization")
+                .fill_null(0)
+                .alias("最大GPUパフォーマンス率(%)"),
+                pl.col("average_gpu_memory")
+                .fill_null(0)
+                .alias("平均GPUメモリ利用率(%)"),
+                pl.col("max_gpu_memory").fill_null(0).alias("最大GPUメモリ利用率(%)"),
+                pl.col("n_runs").fill_null(0),
+                pl.col("duration_hour").fill_null(0),
+                pl.col("assigned_gpu_node").fill_null(0),
+                pl.col("assigned_gpu_hour").fill_null(0),
+            )
+            .sort("企業名")
+        )
+        wandb.log(
+            {"overall_gpu_usage": wandb.Table(data=overall_export_df.to_pandas())}
+        )
+        ### Monthly tables
         gpu_schedule_df = (
             get_whole_gpu_schedule(
                 companies_config=companies_config, target_date=target_date
@@ -239,29 +290,39 @@ def update_tables(
             target_date=target_date,
         ).drop("assigned_gpu_node", "assigned_gpu_hour", "days")
         # join
-        monthly_export_df = gpu_schedule_df.join(
-            _monthly_export_df, on=["year_month", "company_name"], how="left"
-        ).select(
-            pl.col("company_name").alias("企業名"),
-            pl.col("year_month").alias("年月"),
-            pl.col("total_gpu_hour").fill_null(0).alias("合計GPU使用時間"),
-            pl.col("utilization_rate").fill_null(0).alias("GPU稼働率(%)"),
-            pl.col("average_gpu_utilization").alias("平均GPUパフォーマンス率(%)"),
-            pl.col("max_gpu_utilization").alias("最大GPUパフォーマンス率(%)"),
-            pl.col("average_gpu_memory").alias("平均GPUメモリ利用率(%)"),
-            pl.col("max_gpu_memory").alias("最大GPUメモリ利用率(%)"),
-            pl.col("n_runs").fill_null(0),
-            pl.col("duration_hour").fill_null(0),
-            pl.col("assigned_gpu_node"),
-            pl.col("assigned_gpu_hour"),
-
-        ).sort("年月", descending=True)
+        monthly_export_df = (
+            gpu_schedule_df.join(
+                _monthly_export_df, on=["year_month", "company_name"], how="left"
+            )
+            .select(
+                pl.col("company_name").alias("企業名"),
+                pl.col("year_month").alias("年月"),
+                pl.col("total_gpu_hour").fill_null(0).alias("合計GPU使用時間"),
+                pl.col("utilization_rate").fill_null(0).alias("GPU稼働率(%)"),
+                pl.col("average_gpu_utilization")
+                .fill_null(0)
+                .alias("平均GPUパフォーマンス率(%)"),
+                pl.col("max_gpu_utilization")
+                .fill_null(0)
+                .alias("最大GPUパフォーマンス率(%)"),
+                pl.col("average_gpu_memory")
+                .fill_null(0)
+                .alias("平均GPUメモリ利用率(%)"),
+                pl.col("max_gpu_memory").fill_null(0).alias("最大GPUメモリ利用率(%)"),
+                pl.col("n_runs").fill_null(0),
+                pl.col("duration_hour").fill_null(0),
+                pl.col("assigned_gpu_node").fill_null(0),
+                pl.col("assigned_gpu_hour").fill_null(0),
+            )
+            .sort("年月", descending=True)
+            .sort("企業名")
+        )
+        print(monthly_export_df)
+        monthly_export_df.to_pandas().to_csv("monthly_gpu_usage.csv", index=False)
         wandb.log(
             {"monthly_gpu_usage": wandb.Table(data=monthly_export_df.to_pandas())}
         )
-    ###
-    ###
-    # Daily tables
+    ### Daily tables
     daily_summary_df = daily_summarize(df=all_runs_df)
     for company_name in daily_df["company_name"].unique():
         __daily_export_df = daily_df.filter(
@@ -301,15 +362,19 @@ def update_tables(
             pl.col("date").dt.strftime("%Y-%m-%d").alias("日付"),
             pl.col("total_gpu_hour").fill_null(0).alias("合計GPU使用時間"),
             pl.col("utilization_rate").fill_null(0).alias("GPU稼働率(%)"),
-            pl.col("average_gpu_utilization").alias("平均GPUパフォーマンス率(%)"),
-            pl.col("max_gpu_utilization").alias("最大GPUパフォーマンス率(%)"),
-            pl.col("average_gpu_memory").alias("平均GPUメモリ利用率(%)"),
-            pl.col("max_gpu_memory").alias("最大GPUメモリ利用率(%)"),
+            pl.col("average_gpu_utilization")
+            .fill_null(0)
+            .alias("平均GPUパフォーマンス率(%)"),
+            pl.col("max_gpu_utilization")
+            .fill_null(0)
+            .alias("最大GPUパフォーマンス率(%)"),
+            pl.col("average_gpu_memory").fill_null(0).alias("平均GPUメモリ利用率(%)"),
+            pl.col("max_gpu_memory").fill_null(0).alias("最大GPUメモリ利用率(%)"),
             pl.col("n_runs").fill_null(0),
             pl.col("duration_hour").fill_null(0),
             pl.col("no_cap_utilization_rate").fill_null(0),
-            pl.col("assigned_gpu_node"),
-            pl.col("assigned_gpu_hour"),
+            pl.col("assigned_gpu_node").fill_null(0),
+            pl.col("assigned_gpu_hour").fill_null(0),
         ).sort("日付", descending=True)
         with wandb.init(
             entity=path_to_dashboard.entity,
@@ -318,7 +383,9 @@ def update_tables(
             job_type="update-table",
             tags=[company_name, tag_for_latest],
         ) as run:
-            over_100_df = daily_export_df.filter(pl.col("no_cap_utilization_rate") > 100)
+            over_100_df = daily_export_df.filter(
+                pl.col("no_cap_utilization_rate") > 100
+            )
             if not over_100_df.is_empty():
                 alert_text = str(over_100_df.to_pandas().to_dict(orient="records"))
                 print(alert_text)
@@ -336,13 +403,14 @@ def update_tables(
                     ),
                 }
             )
-    # Overall summary
     return {}
+
 
 def remove_project_tags(
     entity: str, project: str, delete_tags: list[str], head: int
 ) -> None:
     """プロジェクトのrunsからタグを削除する"""
+
     def get_run_paths(entity: str, project: str) -> list[str]:
         """プロジェクト内のrun_pathを取得する"""
         api = wandb.Api()
@@ -350,6 +418,7 @@ def remove_project_tags(
         runs = api.runs(path=project_path)
         run_paths = ["/".join((project_path, run.id)) for run in runs]
         return run_paths
+
     api = wandb.Api()
     run_paths = get_run_paths(entity=entity, project=project)[:head]
     assert run_paths, f"run_paths: {run_paths}"

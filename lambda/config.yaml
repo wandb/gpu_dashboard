@@ -25,8 +25,9 @@ companies:
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
-      ## - date: "2024-02-19"  # for test
-        ## assigned_gpu_node: 40
+      ### for test ###
+      # - date: "2024-02-19"  
+        # assigned_gpu_node: 40
   - company_name: pfe-geniac # PFE
     schedule:
       - date: "2024-02-15"

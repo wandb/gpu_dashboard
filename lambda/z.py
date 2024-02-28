@@ -383,6 +383,106 @@ def daily_summarize(df: pl.DataFrame) -> pl.DataFrame:
     return daily_summary_df
 
 
+def overall_summarize(
+    df: pl.DataFrame, companies_config: list[EasyDict], target_date: dt.date
+) -> pl.DataFrame:
+    ### Additional DataFrame
+    # Get gpu schedule
+    gpu_schedule_df = (
+        get_whole_gpu_schedule(
+            companies_config=companies_config, target_date=target_date
+        )
+        .with_columns(
+            pl.col("date").min().alias("start_date"),
+        )
+        .group_by("company_name")
+        .agg(
+            pl.col("assigned_gpu_node").sum(),
+            pl.col("date").count().alias("days"),
+        )
+        .with_columns(
+            pl.col("assigned_gpu_node").mul(8 * 24).alias("assigned_gpu_hour"),
+        )
+    )
+    print(gpu_schedule_df)
+
+    # Add year_month
+    # df = df.with_columns(pl.col("date").dt.strftime("%Y-%m").alias("year_month"))
+    # Prepare weighted average
+    metrics_duraion_df = (
+        df.filter(pl.col("max_gpu_memory").is_not_null())
+        .with_columns(
+            (pl.col("average_gpu_utilization") * pl.col("duration_hour")).alias(
+                "weighted_average_gpu_utilization"
+            ),
+            (pl.col("average_gpu_memory") * pl.col("duration_hour")).alias(
+                "weighted_average_gpu_memory"
+            ),
+        )
+        .group_by("company_name")
+        .agg(
+            pl.col("duration_hour").sum().alias("metrics_duration_hour"),
+            pl.col("weighted_average_gpu_utilization").sum(),
+            pl.col("weighted_average_gpu_memory").sum(),
+        )
+        .with_columns(
+            (
+                pl.col("weighted_average_gpu_utilization")
+                / pl.col("metrics_duration_hour")
+            ).alias("average_gpu_utilization"),
+            (
+                pl.col("weighted_average_gpu_memory") / pl.col("metrics_duration_hour")
+            ).alias("average_gpu_memory"),
+        )
+        .select(
+            "company_name",
+            "metrics_duration_hour",
+            "average_gpu_utilization",
+            "average_gpu_memory",
+        )
+    )
+    print(metrics_duraion_df)
+
+    # Aggregate
+    overall_summary_df = (
+        df.filter(pl.col("date") <= target_date)
+        .with_columns(
+            (pl.col("duration_hour") * pl.col("gpu_count")).alias("total_gpu_hour"),
+        )
+        .group_by("company_name")
+        .agg(
+            pl.col("run_id").n_unique().alias("n_runs").fill_null(0),
+            pl.col("duration_hour").sum().fill_null(0),
+            pl.col("total_gpu_hour").sum().fill_null(0),
+            pl.col("max_gpu_utilization").max(),
+            pl.col("max_gpu_memory").max(),
+        )
+        .join(gpu_schedule_df, on=["company_name"], how="left")
+        .join(metrics_duraion_df, on=["company_name"])
+        .with_columns(
+            (
+                pl.col("total_gpu_hour").truediv(pl.col("assigned_gpu_hour")).mul(100)
+            ).alias("utilization_rate"),
+        )
+        .sort(["company_name"])
+        .select(
+            "company_name",  # key 1
+            "days",
+            "n_runs",
+            "duration_hour",
+            "total_gpu_hour",
+            "assigned_gpu_node",
+            "assigned_gpu_hour",
+            "utilization_rate",
+            "average_gpu_utilization",
+            "max_gpu_utilization",
+            "average_gpu_memory",
+            "max_gpu_memory",
+        )
+    )
+
+    return overall_summary_df
+
 def monthly_summarize(
     df: pl.DataFrame, companies_config: list[EasyDict], target_date: dt.date
 ) -> pl.DataFrame:
@@ -488,17 +588,21 @@ def monthly_summarize(
 
 def set_schema(df: pl.DataFrame) -> pl.DataFrame:
     """Dataframeのdata型をcastする"""
-    new_df = df.with_columns(
-        pl.col("run_id").cast(pl.String),
-        pl.col("assigned_gpu_node").cast(pl.Float64),
-        pl.col("duration_hour").cast(pl.Float64),
-        pl.col("gpu_count").cast(pl.Float64),
-        pl.col("average_gpu_utilization").cast(pl.Float64),
-        pl.col("average_gpu_memory").cast(pl.Float64),
-        pl.col("max_gpu_utilization").cast(pl.Float64),
-        pl.col("max_gpu_memory").cast(pl.Float64),
-    )
-    return new_df
+    try:
+        new_df = df.with_columns(
+            pl.col("run_id").cast(pl.String),
+            pl.col("assigned_gpu_node").cast(pl.Float64),
+            pl.col("duration_hour").cast(pl.Float64),
+            pl.col("gpu_count").cast(pl.Float64),
+            pl.col("average_gpu_utilization").cast(pl.Float64),
+            pl.col("average_gpu_memory").cast(pl.Float64),
+            pl.col("max_gpu_utilization").cast(pl.Float64),
+            pl.col("max_gpu_memory").cast(pl.Float64),
+        )
+        return new_df
+    except:
+        print("!!! Failed to cast data type !!!")
+        return pl.DataFrame()
 
 def remove() -> dict[str, int]:
     entity, project = "geniac-gpu", "test-gpu-dashboard"

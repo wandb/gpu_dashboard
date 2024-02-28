@@ -50,7 +50,7 @@ def handler(event: dict[str, str], context: object) -> None:
     # -------------#
     # Update data #
     # -------------#
-    ### Get new runs
+    ## Get new runs
     df_list = []
     company_config: EasyDict
     for company_config in tqdm(config.companies):
@@ -83,7 +83,7 @@ def handler(event: dict[str, str], context: object) -> None:
         delete_tags=config.tag_for_latest,
         head=(len(config.companies) + 2) * 2,  # +2はupdateとreadの分
     )
-    ### Update artifacts
+    ## Update artifacts
     end_time1 = time.time()
     elapsed_time1 = "{} min {} sec".format(
         int((end_time1 - start_time) // 60), int((end_time1 - start_time) % 60)
