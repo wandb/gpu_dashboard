@@ -23,10 +23,8 @@ def handler(event: dict[str, str], context: object) -> None:
     print(f"Test mode: {config.testmode}")
 
     ### Set WANDB envirionment
-    WANDB_API_KEY = event.get("WANDB_API_KEY")
-    if WANDB_API_KEY is not None:
-        del os.environ["WANDB_API_KEY"]
-        os.environ["WANDB_API_KEY"] = WANDB_API_KEY
+    if event.get("WANDB_API_KEY") is not None:
+        os.environ["WANDB_API_KEY"] = event.get("WANDB_API_KEY")
     os.environ["WANDB_CACHE_DIR"] = config.wandb_dir
     os.environ["WANDB_DATA_DIR"] = config.wandb_dir
     os.environ["WANDB_DIR"] = config.wandb_dir
@@ -119,7 +117,7 @@ def handler(event: dict[str, str], context: object) -> None:
 if __name__ == "__main__":
     ### Parse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--api", type=str, required=True)
+    parser.add_argument("--api", type=str)
     parser.add_argument("--target-date", type=str)
     args = parser.parse_args()
     ### Run
