@@ -404,7 +404,6 @@ def overall_summarize(
             pl.col("assigned_gpu_node").mul(8 * 24).alias("assigned_gpu_hour"),
         )
     )
-    print(gpu_schedule_df)
 
     # Add year_month
     # df = df.with_columns(pl.col("date").dt.strftime("%Y-%m").alias("year_month"))
@@ -441,7 +440,6 @@ def overall_summarize(
             "average_gpu_memory",
         )
     )
-    print(metrics_duraion_df)
 
     # Aggregate
     overall_summary_df = (

@@ -2,6 +2,7 @@ import os
 import argparse
 import datetime as dt
 import json
+import pytz
 import time
 
 from easydict import EasyDict
@@ -32,10 +33,11 @@ def handler(event: dict[str, str], context: object) -> None:
     print(f"Default entity: {wandb.api.default_entity}")
 
     ### Set target date
+    logged_at = dt.datetime.now(pytz.utc) + dt.timedelta(hours=9)
     target_date: dt.date
     target_date_str = event.get("target_date")
     if target_date_str is None:
-        target_date = dt.date.today() + dt.timedelta(days=-1)
+        target_date = logged_at.date()
     else:
         try:
             target_date = dt.datetime.strptime(target_date_str, "%Y-%m-%d").date()
@@ -43,6 +45,7 @@ def handler(event: dict[str, str], context: object) -> None:
             print(body := "!!! Invalid date format !!!")
             return {"statusCode": 200, "body": json.dumps(body)}
     # Check
+    print(f"Logged at: {logged_at}")
     print(f"Target date: {target_date}")
 
     # -------------#
@@ -60,7 +63,7 @@ def handler(event: dict[str, str], context: object) -> None:
             target_date=target_date,
             ignore_project=company_config.get("ignore_project"),
             # ignore_project=None, # for test
-            logged_at=dt.datetime.now(),
+            logged_at=logged_at,
             ignore_tag=config.ignore_tag,
             testmode=config.testmode,
         )
