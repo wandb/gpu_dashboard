@@ -323,6 +323,7 @@ def update_tables(
     ### Daily tables
     daily_summary_df = daily_summarize(df=all_runs_df)
     for company_name in daily_df["company_name"].unique():
+        print(company_name)
         __daily_export_df = daily_df.filter(
             pl.col("company_name") == company_name
         )  # Basis

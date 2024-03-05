@@ -37,7 +37,7 @@ def handler(event: dict[str, str], context: object) -> None:
     target_date: dt.date
     target_date_str = event.get("target_date")
     if target_date_str is None:
-        target_date = logged_at.date()
+        target_date = logged_at.date() + dt.timedelta(days=-1)
     else:
         try:
             target_date = dt.datetime.strptime(target_date_str, "%Y-%m-%d").date()
