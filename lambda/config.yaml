@@ -15,26 +15,27 @@ dashboard-path:
 
 companies:
   - company: abeja-geniac # ABEJA
-    entities:
+    teams:
       - abeja-geniac
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
   - company: pfe-geniac # PFE
-    entities:
+    teams:
       - pfe-geniac
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 50
   - company: stockmark-geniac # Stockmark
-    entities:
+    teams:
       - stockmark-geniac
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
-    ignore_project: 100b
+    ignore_projects:
+      - 100b
   - company: turing-geniac # Turing
-    entities:
+    teams:
       - turing-geniac
     schedule:
       - date: "2024-02-15"
@@ -42,13 +43,13 @@ companies:
       - date: "2024-06-15"
         assigned_gpu_node: 35
   - company: nii-geniac # NII
-    entities:
+    teams:
       - nii-geniac
     schedule:
       - date: "2024-04-15"
         assigned_gpu_node: 75
   - company: weblab-geniac # Matsuo LB
-    entities:
+    teams:
       - weblab-team1
       - weblab-team2
       - weblab-team3
@@ -61,6 +62,8 @@ companies:
       - date: "2024-04-15"
         assigned_gpu_node: 21
   - company: sakanaai-geniac # Sakana AI
+    teams:
+      - sakanaai-geniac
     schedule:
       - date: "2024-06-15"
         assigned_gpu_node: 32
