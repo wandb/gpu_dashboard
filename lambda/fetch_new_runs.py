@@ -59,9 +59,9 @@ def fetch_new_runs(target_date: dt.datetime):
 
     # get runs for each project
     for tree in tqdm(trees):
-        print("team:", tree.team)
+        print("Team:", tree.team)
         for project in tree.projects:
-            print("  project:", project.project)
+            print("  Project:", project.project)
             runs = query_runs(
                 team=tree.team,
                 project=project.project,
@@ -71,7 +71,7 @@ def fetch_new_runs(target_date: dt.datetime):
 
     # get metrics for each run
     for tree in tqdm(trees):
-        print("team:", tree.team)
+        print("Team:", tree.team)
         for project in tree.projects:
             for run in project.runs:
                 metrics_df = get_metrics(
@@ -85,7 +85,7 @@ def fetch_new_runs(target_date: dt.datetime):
     # concat run df
     df_list = []
     for tree in tqdm(trees):
-        print("team:", tree.team)
+        print("Team:", tree.team)
         for project in tree.projects:
             for run in project.runs:
                 new_run_df = get_new_run_df(

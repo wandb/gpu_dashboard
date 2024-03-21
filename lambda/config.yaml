@@ -1,17 +1,18 @@
-testmode: false
+testmode: true
 ignore_tag: other_gpu
 tag: latest
 wandb_dir: /tmp
 
-dataset-path:
-  - entity: geniac-gpu
-    project: gpu-dashboard-dev
-    artifact: version_20240227
+dateset:
+  entity: geniac-gpu
+  project: test-gpu-dashboard
+  artifact: version_20240227
 
-dashboard-path:
-  - entity: geniac-gpu
-    project: test-gpu-dashboard
-    tag_for_latest: latest
+dashboard:
+  entity: geniac-gpu
+  project: gpu-dashboard-dev
+  artifact: version_20240227
+  tag_for_latest: latest
 
 companies:
   - company: abeja-geniac # ABEJA
