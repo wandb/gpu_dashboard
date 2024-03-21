@@ -5,7 +5,7 @@ wandb_dir: /tmp
 
 dataset:
   entity: geniac-gpu
-  project: test-gpu-dashboard
+  project: gpu-dashboard-dev
   artifact: version_20240227
 
 dashboard:
