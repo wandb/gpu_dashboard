@@ -10,7 +10,7 @@ import wandb
 from wandb_gql import gql
 
 from config import CONFIG
-from gql_query import QUERY
+from utils import GQL_QUERY
 
 JAPAN_TIMEZONE = pytz.timezone("Asia/Tokyo")
 LOGGED_AT = dt.datetime.now(JAPAN_TIMEZONE).replace(tzinfo=None)
@@ -133,7 +133,7 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
     ignore_tag = CONFIG.ignore_tag
     while True:
         results = api.client.execute(
-            gql(QUERY),
+            gql(GQL_QUERY),
             {
                 "entity": team,
                 "project": project,

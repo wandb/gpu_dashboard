@@ -24,3 +24,32 @@ def remove_project_tags(
         new_tags = [tag for tag in old_tags if tag not in delete_tags]
         run.tags = new_tags
         run.update()
+
+GQL_QUERY = """\
+query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $cursor: String!) {
+    project(name: $project, entityName: $entity) {
+        name
+        runs(first: $first, after: $cursor) {
+            edges {
+                cursor
+                node {
+                    name
+                    user {
+                        username
+                    }
+                    computeSeconds
+                    createdAt
+                    updatedAt
+                    state
+                    tags
+                    systemMetrics
+                    runInfo {
+                        gpuCount
+                        gpu
+                    }
+                }
+            }
+        }
+    }
+}\
+"""
