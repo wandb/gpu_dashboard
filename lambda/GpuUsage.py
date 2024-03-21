@@ -3,18 +3,14 @@ import argparse
 import datetime as dt
 import json
 
-
-# from easydict import EasyDict
-# import polars as pl
-# from tqdm import tqdm
 import wandb
 
-from blank_table import BlankTable
 from config import CONFIG
 from fetch_new_runs import fetch_new_runs
 from utils import remove_project_tags
 from handle_artifacts import handle_artifacts
 from update_tables import update_tables
+
 
 def handler(event: dict[str, str], context: object) -> None:
     # -------------------- 準備 -------------------- #
@@ -65,11 +61,11 @@ def handler(event: dict[str, str], context: object) -> None:
 
 
 if __name__ == "__main__":
-    ### Parse
+    # Parse
     parser = argparse.ArgumentParser()
     parser.add_argument("--api", type=str, required=True)
     parser.add_argument("--target-date", type=str)
     args = parser.parse_args()
-    ### Run
+    # Run
     event = {"WANDB_API_KEY": args.api, "target_date": args.target_date}
     handler(event=event, context=None)
