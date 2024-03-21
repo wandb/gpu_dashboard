@@ -5,7 +5,7 @@ import wandb
 from config import CONFIG
 
 
-def handel_artifacts(new_runs_df: pl.DataFrame) -> pl.DataFrame:
+def handle_artifacts(new_runs_df: pl.DataFrame) -> pl.DataFrame:
     old_runs_df = read_artifacts()
     all_runs_df = update_df(new_runs_df=new_runs_df, old_runs_df=old_runs_df)
     update_artifacts(all_runs_df=all_runs_df)
@@ -25,7 +25,7 @@ def read_artifacts() -> pl.DataFrame:
             project = CONFIG.dataset.project
             artifact_name = CONFIG.dataset.artifact
             wandb_dir = CONFIG.wandb_dir
-            # # ダウンロード
+            # ダウンロード
             artifact_path = f"{entity}/{project}/{artifact_name}:latest"
             artifact = run.use_artifact(f"{artifact_path}")
             artifact_dir = artifact.download(wandb_dir)
@@ -42,7 +42,8 @@ def read_artifacts() -> pl.DataFrame:
                 pl.col("updated_at").cast(pl.Datetime("us")),
                 pl.col("logged_at").cast(pl.Datetime("us")),
             )
-        except:
+        except Exception as e:
+            print(e)
             old_runs_df = pl.DataFrame()
         finally:
             return old_runs_df

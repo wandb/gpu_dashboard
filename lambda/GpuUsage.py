@@ -1,14 +1,13 @@
 import os
 import argparse
 import datetime as dt
-import json
 
 import wandb
 
 from config import CONFIG
-from fetch_new_runs import fetch_new_runs
-from utils import remove_project_tags
+from fetch_runs import fetch_runs
 from handle_artifacts import handle_artifacts
+from remove_tags import remove_tags
 from update_tables import update_tables
 
 
@@ -32,8 +31,7 @@ def handler(event: dict[str, str], context: object) -> None:
         try:
             target_date = dt.datetime.strptime(target_date_str, "%Y-%m-%d").date()
         except:
-            print(body := "!!! Invalid date format !!!")
-            return {"statusCode": 200, "body": json.dumps(body)}
+            print("!!! Invalid date format !!!")
 
     # Check
     print(f"Test mode: {CONFIG.testmode}")
@@ -42,19 +40,14 @@ def handler(event: dict[str, str], context: object) -> None:
 
     # -------------------- データ更新 -------------------- #
     # Get new runs
-    new_runs_df = fetch_new_runs(target_date=target_date)
+    new_runs_df = fetch_runs(target_date=target_date)
 
     # Update artifacts
-    all_runs_df = handle_artifacts(new_df=new_runs_df)
+    all_runs_df = handle_artifacts(new_runs_df=new_runs_df)
 
     # -------------------- テーブル更新 -------------------- #
     # Remove project tags
-    remove_project_tags(
-        entity=CONFIG.dashboard_path.entity,
-        project=CONFIG.dashboard_path.project,
-        delete_tags=CONFIG.dashboard_path.tag,
-        num=(len(CONFIG.companies) + 2) * 2,  # +2はupdateとreadの分
-    )
+    remove_project_tags()
     # Update tables
     update_tables(all_runs_df=all_runs_df, target_date=target_date)
     return None

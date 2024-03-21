@@ -10,10 +10,33 @@ import wandb
 from wandb_gql import gql
 
 from config import CONFIG
-from utils import GQL_QUERY
 
 JAPAN_TIMEZONE = pytz.timezone("Asia/Tokyo")
 LOGGED_AT = dt.datetime.now(JAPAN_TIMEZONE).replace(tzinfo=None)
+
+GQL_QUERY = """\
+query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $cursor: String!) {
+    project(name: $project, entityName: $entity) {
+        name
+        runs(first: $first, after: $cursor) {
+            edges {
+                cursor
+                node {
+                    name
+                    createdAt
+                    updatedAt
+                    state
+                    tags
+                    runInfo {
+                        gpuCount
+                        gpu
+                    }
+                }
+            }
+        }
+    }
+}\
+"""
 
 
 @dataclass
@@ -41,11 +64,11 @@ class Tree:
     runs: list[Run] = None
 
 
-def fetch_new_runs(target_date: dt.datetime):
+def fetch_runs(target_date: dt.datetime):
     """新しいrunを取得し、データを整形して返す"""
     trees = plant_trees()
 
-    # get projects for each team
+    print("Get projects for each team ...")
     for tree in trees:
         if target_date >= tree.start_date:
             projects = [
@@ -57,11 +80,10 @@ def fetch_new_runs(target_date: dt.datetime):
             projects = []
         tree.projects = projects
 
-    # get runs for each project
+    print("Get runs for each project ...")
     for tree in tqdm(trees):
         print("Team:", tree.team)
-        for project in tree.projects:
-            print("  Project:", project.project)
+        for project in tqdm(tree.projects):
             runs = query_runs(
                 team=tree.team,
                 project=project.project,
@@ -69,10 +91,10 @@ def fetch_new_runs(target_date: dt.datetime):
             )
             project.runs = runs
 
-    # get metrics for each run
+    print("Get metrics for each run ...")
     for tree in tqdm(trees):
         print("Team:", tree.team)
-        for project in tree.projects:
+        for project in tqdm(tree.projects):
             for run in project.runs:
                 metrics_df = get_metrics(
                     team=tree.team,
@@ -274,17 +296,13 @@ def get_new_run_df(
             .str.strptime(pl.Datetime, "%Y-%m-%d %H:%M")  # datetime型に戻す
         )
         df = (
-            (
-                pl.DataFrame()
-                .with_columns(
-                    minutes_range.alias("datetime_mins"),
-                )
-                .with_columns(
-                    pl.col("datetime_mins").dt.strftime("%Y-%m-%d").alias("date")
-                )
-                .group_by("date")
-                .agg(pl.col("datetime_mins").count().truediv(60).alias("duration_hour"))
+            pl.DataFrame()
+            .with_columns(
+                minutes_range.alias("datetime_mins"),
             )
+            .with_columns(pl.col("datetime_mins").dt.strftime("%Y-%m-%d").alias("date"))
+            .group_by("date")
+            .agg(pl.col("datetime_mins").count().truediv(60).alias("duration_hour"))
             .with_columns(
                 pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
             )

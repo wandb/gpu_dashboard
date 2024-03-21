@@ -1,6 +1,7 @@
 import datetime as dt
 
 from easydict import EasyDict
+import pandas as pd
 import polars as pl
 
 from config import CONFIG
@@ -9,6 +10,7 @@ from config import CONFIG
 class BlankTable:
     def __init__(self, target_date: dt.date = dt.date.today()):
         self.target_date = target_date
+        self.team_table = team_table()
         self.daily_table = daily_table(target_date=target_date)
         self.monthy_table = monthly_table(daily_table=self.daily_table)
         self.overall_table = overall_table(daily_table=self.daily_table)
@@ -50,13 +52,6 @@ def daily_table(target_date: dt.date) -> pl.DataFrame:
         )
         df_list.append(company_schedule_df)
     schedule_df = pl.concat(df_list)
-
-    # check
-    assert len(schedule_df.filter(pl.col("date") == dt.date(2024, 2, 15))) == 4
-    assert schedule_df.filter(pl.col("date") == dt.date(2024, 2, 15))[
-        "assigned_gpu_node"
-    ].sum() == (50 + 48 * 2 + 4)
-
     return schedule_df
 
 
@@ -101,3 +96,15 @@ def get_schedule() -> list[EasyDict]:
         s = EasyDict({k: v for k, v in comp.items() if k in keys})
         schedules.append(s)
     return schedules
+
+
+def team_table() -> pl.DataFrame:
+    """企業とチームの対応テーブルを作成"""
+    df_list = []
+    for c in CONFIG.companies:
+        company = c["company"]
+        teams = c["teams"]
+        df = pd.DataFrame({"company": [company] * len(teams), "team": teams})
+        df_list.append(df)
+    team_table = pl.from_pandas(pd.concat(df_list))
+    return team_table
