@@ -13,6 +13,7 @@ from config import CONFIG
 
 JAPAN_TIMEZONE = pytz.timezone("Asia/Tokyo")
 LOGGED_AT = dt.datetime.now(JAPAN_TIMEZONE).replace(tzinfo=None)
+JAPAN_UTC_OFFSET = 9
 
 GQL_QUERY = """\
 query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $cursor: String!) {
@@ -132,9 +133,8 @@ def plant_trees() -> list[Tree]:
         start_date = df["date"].min()
         return start_date
 
-    comps = CONFIG.companies
     trees = []
-    for comp in comps:
+    for comp in CONFIG.companies:
         for team in comp.teams:
             tree = Tree(
                 team=team,
@@ -149,10 +149,9 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
     if CONFIG.testmode:
         if team != "stockmark-geniac":
             return []
-    api = wandb.Api()
+    api = wandb.Api(timeout=60)
     cursor = ""
     nodes, runs = [], []
-    ignore_tag = CONFIG.ignore_tag
     while True:
         results = api.client.execute(
             gql(GQL_QUERY),
@@ -170,8 +169,8 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
         cursor = _edges[-1]["cursor"]
     for node in nodes:
         # 日付で時差を考慮
-        createdAt = dt.datetime.fromisoformat(node.createdAt) + dt.timedelta(hours=9)
-        updatedAt = dt.datetime.fromisoformat(node.updatedAt) + dt.timedelta(hours=9)
+        createdAt = dt.datetime.fromisoformat(node.createdAt) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
+        updatedAt = dt.datetime.fromisoformat(node.updatedAt) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
 
         # Skip
         if not node.get("runInfo"):
@@ -184,7 +183,7 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
             continue
         if target_date < createdAt.date():  # 未来のものはスキップ
             continue
-        if ignore_tag in node.tags:  # 特定のtagをスキップ
+        if CONFIG.ignore_tag in node.tags:  # 特定のtagをスキップ
             continue
 
         # データ追加
@@ -253,7 +252,7 @@ def get_metrics(
             pl.col("value").mean().alias("average"),
             pl.col("value").max().alias("max"),
             pl.col("_timestamp")
-            .map_elements(lambda x: (max(x) - min(x)) / 60**2)
+            .map_elements(lambda x: (max(x) - min(x)) / 60**2) # seconds * 60 * 60 = hours
             .alias("metrics_hours"),
         )
         .collect()
@@ -302,7 +301,7 @@ def get_new_run_df(
             )
             .with_columns(pl.col("datetime_mins").dt.strftime("%Y-%m-%d").alias("date"))
             .group_by("date")
-            .agg(pl.col("datetime_mins").count().truediv(60).alias("duration_hour"))
+            .agg(pl.col("datetime_mins").count().truediv(60).alias("duration_hour")) # mins / 60 = hours
             .with_columns(
                 pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
             )
@@ -336,7 +335,7 @@ def get_new_run_df(
         pl.lit(run.created_at).cast(pl.Datetime).alias("created_at"),
         pl.lit(run.updated_at).cast(pl.Datetime).alias("updated_at"),
         pl.lit(run.state).cast(pl.String).alias("state"),
-        pl.lit(run.gpu_count).cast(pl.Float64).alias("gpu_count"),
+        pl.lit(run.gpu_count).cast(pl.Int64).alias("gpu_count"),
         pl.lit(LOGGED_AT).cast(pl.Datetime).alias("logged_at"),
         pl.lit(CONFIG.testmode).cast(pl.Boolean).alias("testmode"),
     ).select(

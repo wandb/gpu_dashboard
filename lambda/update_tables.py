@@ -6,7 +6,17 @@ import wandb
 from blank_table import BlankTable
 from config import CONFIG
 
+GPU_PER_NODE = 8
+HOURS_PER_DAY = 24
+MAX_PERCENT = 100
+
+
+def fillna_round(srs: pl.Series) -> pl.Series:
+    return srs.fill_null(0).fill_nan(0).round(1)
+
+
 TMP_COLS = (
+    (pl.col("duration_hour") * pl.col("gpu_count")).alias("gpu_hour"),
     pl.when(pl.col("average_gpu_utilization").is_not_null())
     .then(pl.col("duration_hour"))
     .otherwise(None)
@@ -19,8 +29,11 @@ TMP_COLS = (
 
 AGG_COLS = (
     pl.col("duration_hour").sum().alias("total_duration_hour"),
-    pl.col("duration_hour").sum().mul(8).alias("total_gpu_hour"),
-    pl.col("assigned_gpu_node").first().mul(8).mul(24).alias("assigned_gpu_hour"),
+    pl.col("gpu_hour").sum().alias("total_gpu_hour"),
+    pl.col("assigned_gpu_node")
+    .first()
+    .mul(GPU_PER_NODE * HOURS_PER_DAY)
+    .alias("assigned_gpu_hour"),
     pl.col("metrics_hour").sum().alias("total_metrics_hour"),
     pl.col("sum_gpu_utilization").sum(),
     pl.col("max_gpu_utilization").max(),
@@ -33,8 +46,10 @@ AGG_COLS = (
 METRICS_COLS = (
     # utilization_rate
     pl.when(pl.col("total_gpu_hour") > pl.col("assigned_gpu_hour"))
-    .then(100)
-    .otherwise((pl.col("total_gpu_hour") / pl.col("assigned_gpu_hour")).mul(100))
+    .then(MAX_PERCENT)
+    .otherwise(
+        (pl.col("total_gpu_hour") / pl.col("assigned_gpu_hour")).mul(MAX_PERCENT)
+    )
     .alias("utilization_rate"),
     # average of metrics
     (pl.col("sum_gpu_utilization") / pl.col("total_metrics_hour")).alias(
@@ -46,30 +61,23 @@ METRICS_COLS = (
 )
 
 SELECT_COLS = (
-    pl.col("total_gpu_hour")
-    #
-    .fill_null(0).fill_nan(0).round(1).alias("合計GPU使用時間(h)"),
-    pl.col("utilization_rate")
-    #
-    .fill_null(0).fill_nan(0).round(1).alias("GPU稼働率(%)"),
+    pl.col("total_gpu_hour").pipe(fillna_round).alias("合計GPU使用時間(h)"),
+    pl.col("utilization_rate").pipe(fillna_round).alias("GPU稼働率(%)"),
     pl.col("average_gpu_utilization")
-    #
-    .fill_null(0).fill_nan(0).round(1).alias("平均GPUパフォーマンス率(%)"),
+    .pipe(fillna_round)
+    .alias("平均GPUパフォーマンス率(%)"),
     pl.col("max_gpu_utilization")
-    #
-    .fill_null(0).fill_nan(0).round(1).alias("最大GPUパフォーマンス率(%)"),
-    pl.col("average_gpu_memory")
-    #
-    .fill_null(0).fill_nan(0).round(1).alias("平均GPUメモリ利用率(%)"),
-    pl.col("max_gpu_memory")
-    #
-    .fill_null(0).fill_nan(0).round(1).alias("最大GPUメモリ利用率(%)"),
+    .pipe(fillna_round)
+    .alias("最大GPUパフォーマンス率(%)"),
+    pl.col("average_gpu_memory").pipe(fillna_round).alias("平均GPUメモリ利用率(%)"),
+    pl.col("max_gpu_memory").pipe(fillna_round).alias("最大GPUメモリ利用率(%)"),
     pl.col("n_runs"),
     pl.col("assigned_gpu_node"),
     pl.col("assigned_gpu_hour"),
     pl.col("total_duration_hour"),
     pl.col("total_metrics_hour"),
 )
+
 
 def update_tables(all_runs_df: pl.DataFrame, target_date: dt.date) -> None:
     gpu_overall_table = agg_overall(all_runs_df=all_runs_df, target_date=target_date)
@@ -208,13 +216,14 @@ def update_companies(
             job_type="update-table",
             tags=[company, CONFIG.dashboard.tag_for_latest],
         ) as run:
+            limit = 30
             wandb.log(
                 {
                     "company_daily_gpu_usage": wandb.Table(
                         data=gpu_daily_company_table.to_pandas()
                     ),
-                    "company_daily_gpu_usage_within_30days": wandb.Table(
-                        data=gpu_daily_company_table.head(30).to_pandas()
+                    f"company_daily_gpu_usage_within_{limit}days": wandb.Table(
+                        data=gpu_daily_company_table.head(limit).to_pandas()
                     ),
                 }
             )

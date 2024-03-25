@@ -47,7 +47,7 @@ def handler(event: dict[str, str], context: object) -> None:
 
     # -------------------- テーブル更新 -------------------- #
     # Remove project tags
-    remove_project_tags()
+    remove_tags()
     # Update tables
     update_tables(all_runs_df=all_runs_df, target_date=target_date)
     return None
