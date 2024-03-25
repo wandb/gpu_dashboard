@@ -28,6 +28,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
                     updatedAt
                     state
                     tags
+                    host
                     runInfo {
                         gpuCount
                         gpu
@@ -43,9 +44,12 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
 @dataclass
 class Run:
     run_id: str
-    state: str
     created_at: dt.datetime
     updated_at: dt.datetime
+    state: str
+    tags: list[str]
+    host: str
+    gpu_name: str
     gpu_count: int
     metrics_df: pl.DataFrame = None
 
@@ -189,9 +193,12 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
         # データ追加
         run = Run(
             run_id=node.name,
-            state=node.state,
-            created_at=createdAt,
             updated_at=updatedAt,
+            created_at=createdAt,
+            state=node.state,
+            tags=node.tags,
+            host=node.host,
+            gpu_name=node.runInfo.gpu,
             gpu_count=node.runInfo.gpuCount,
         )
         runs.append(run)
