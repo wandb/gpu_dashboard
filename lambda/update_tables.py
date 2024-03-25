@@ -44,7 +44,14 @@ AGG_COLS = (
 )
 
 METRICS_COLS = (
-    # utilization_rate
+    # save as different name
+    pl.col("total_gpu_hour").alias("_total_gpu_hour"),
+    # apply cap to total_gpu_hour
+    pl.when(pl.col("total_gpu_hour") > pl.col("assigned_gpu_hour"))
+    .then(pl.col("assigned_gpu_hour"))
+    .otherwise(pl.col("total_gpu_hour"))
+    .alias("total_gpu_hour"),
+    # apply cap to utilization_rate
     pl.when(pl.col("total_gpu_hour") > pl.col("assigned_gpu_hour"))
     .then(MAX_PERCENT)
     .otherwise(
@@ -74,6 +81,7 @@ SELECT_COLS = (
     pl.col("n_runs"),
     pl.col("assigned_gpu_node"),
     pl.col("assigned_gpu_hour"),
+    pl.col("_total_gpu_hour"),
     pl.col("total_duration_hour"),
     pl.col("total_metrics_hour"),
 )
