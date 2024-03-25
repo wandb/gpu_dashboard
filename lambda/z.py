@@ -357,6 +357,12 @@ def daily_summarize(df: pl.DataFrame) -> pl.DataFrame:
             ).alias("no_cap_utilization_rate"),
         )
         .with_columns(
+            pl.when(pl.col("total_gpu_hour") > pl.col("assigned_gpu_hour"))
+            .then(pl.col("assigned_gpu_hour"))
+            .otherwise(pl.col("total_gpu_hour"))
+            .alias("total_gpu_hour"),
+        )
+        .with_columns(
             # 100超えていたらcapする
             pl.when(pl.col("no_cap_utilization_rate") > 100)
             .then(100)
