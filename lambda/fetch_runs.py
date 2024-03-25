@@ -44,11 +44,12 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
 @dataclass
 class Run:
     run_id: str
+    run_path: str
     created_at: dt.datetime
     updated_at: dt.datetime
     state: str
     tags: list[str]
-    host: str
+    host_name: str
     gpu_name: str
     gpu_count: int
     metrics_df: pl.DataFrame = None
@@ -95,6 +96,17 @@ def fetch_runs(target_date: dt.datetime):
                 target_date=target_date,
             )
             project.runs = runs
+
+    print("Checking overlap of runs in each team ...")
+    alert_texts = []
+    for tree in tqdm(trees):
+        print("Team:", tree.team)
+        team_runs = []
+        for project in tqdm(tree.projects):
+            for run in project.runs:
+                team_runs.append(run)
+        alert_texts += find_overlap_runs(runs=team_runs)
+    alert_overlap_runs(alert_texts=alert_texts)
 
     print("Get metrics for each run ...")
     for tree in tqdm(trees):
@@ -173,8 +185,12 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
         cursor = _edges[-1]["cursor"]
     for node in nodes:
         # 日付で時差を考慮
-        createdAt = dt.datetime.fromisoformat(node.createdAt) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
-        updatedAt = dt.datetime.fromisoformat(node.updatedAt) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
+        createdAt = dt.datetime.fromisoformat(node.createdAt) + dt.timedelta(
+            hours=JAPAN_UTC_OFFSET
+        )
+        updatedAt = dt.datetime.fromisoformat(node.updatedAt) + dt.timedelta(
+            hours=JAPAN_UTC_OFFSET
+        )
 
         # Skip
         if not node.get("runInfo"):
@@ -193,16 +209,48 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
         # データ追加
         run = Run(
             run_id=node.name,
+            run_path=("/").join((team, project, node.name)),
             updated_at=updatedAt,
             created_at=createdAt,
             state=node.state,
             tags=node.tags,
-            host=node.host,
+            host_name=node.host,
             gpu_name=node.runInfo.gpu,
             gpu_count=node.runInfo.gpuCount,
         )
         runs.append(run)
     return runs
+
+
+def find_overlap_runs(runs: list[Run]) -> list[str]:
+    """team内で同じhostが同時にrunを作っているものを"""
+    alert_texts = []
+    for i in range(len(runs)):
+        for j in range(i + 1, len(runs)):
+            if (
+                runs[i].host_name == runs[j].host_name
+                and runs[i].created_at < runs[j].updated_at
+                and runs[j].created_at < runs[i].updated_at
+            ):
+                alert_text = "Overlap of runs found. Please check runs below.\n  {run1}\n  {run2}".format(
+                    run1=runs[i].__dict__, run2=runs[j].__dict__
+                )
+                print(alert_text)
+                alert_texts.append(alert_text)
+    return alert_texts
+
+
+def alert_overlap_runs(alert_texts: list[str]) -> None:
+    if (not alert_texts) | CONFIG.testmode:
+        return None
+    with wandb.init(
+        entity=CONFIG.dashboard.entity,
+        project=CONFIG.dashboard.project,
+        name=f"Alert",
+    ) as run:
+        for alert_text in alert_texts:
+            wandb.alert(alert_text)
+    return None
 
 
 def get_metrics(
@@ -259,7 +307,9 @@ def get_metrics(
             pl.col("value").mean().alias("average"),
             pl.col("value").max().alias("max"),
             pl.col("_timestamp")
-            .map_elements(lambda x: (max(x) - min(x)) / 60**2) # seconds * 60 * 60 = hours
+            .map_elements(
+                lambda x: (max(x) - min(x)) / 60**2
+            )  # seconds * 60 * 60 = hours
             .alias("metrics_hours"),
         )
         .collect()
@@ -308,7 +358,9 @@ def get_new_run_df(
             )
             .with_columns(pl.col("datetime_mins").dt.strftime("%Y-%m-%d").alias("date"))
             .group_by("date")
-            .agg(pl.col("datetime_mins").count().truediv(60).alias("duration_hour")) # mins / 60 = hours
+            .agg(
+                pl.col("datetime_mins").count().truediv(60).alias("duration_hour")
+            )  # mins / 60 = hours
             .with_columns(
                 pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
             )
