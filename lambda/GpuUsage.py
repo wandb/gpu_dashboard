@@ -43,7 +43,7 @@ def handler(event: dict[str, str], context: object) -> None:
     new_runs_df = fetch_runs(target_date=target_date)
 
     # Update artifacts
-    all_runs_df = handle_artifacts(new_runs_df=new_runs_df)
+    all_runs_df = handle_artifacts(new_runs_df=new_runs_df, target_date=target_date)
 
     # -------------------- テーブル更新 -------------------- #
     # Remove project tags
