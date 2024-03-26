@@ -412,7 +412,7 @@ def remove_project_tags(
 
     def get_run_paths(entity: str, project: str) -> list[str]:
         """プロジェクト内のrun_pathを取得する"""
-        api = wandb.Api()
+        api = wandb.Api(timeout=60)
         project_path = "/".join((entity, project))
         runs = api.runs(path=project_path)
         run_paths = ["/".join((project_path, run.id)) for run in runs]
