@@ -249,7 +249,7 @@ def alert_overlap_runs(alert_texts: list[str]) -> None:
         name=f"Alert",
     ) as run:
         for alert_text in alert_texts:
-            wandb.alert(alert_text)
+            wandb.alert(title="Overlap of runs found", text=alert_text)
     return None
 
 
