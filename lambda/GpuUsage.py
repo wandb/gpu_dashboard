@@ -56,7 +56,7 @@ def handler(event: dict[str, str], context: object) -> None:
 if __name__ == "__main__":
     # Parse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--api", type=str, required=True)
+    parser.add_argument("--api", type=str)
     parser.add_argument("--target-date", type=str)
     args = parser.parse_args()
     # Run
