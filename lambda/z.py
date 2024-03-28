@@ -112,7 +112,7 @@ def fetch_runs(
             if target_date < createdAt.date():
                 # 未来のものはスキップ
                 continue
-            if ignore_tag in run.tags:
+            if ignore_tag in [t.lower() for t in run.tags]:
                 # 特定のtagをスキップ
                 continue
 
