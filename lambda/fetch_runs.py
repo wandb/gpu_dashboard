@@ -161,7 +161,7 @@ def plant_trees() -> list[Tree]:
     return trees
 
 
-def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
+def query_runs(team: str, project: str, target_date: dt.date, make_blacklist=False) -> list[Run]:
     if CONFIG.testmode:
         if team != "stockmark-geniac":
             return []
@@ -199,12 +199,14 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
             continue
         if createdAt.timestamp() == updatedAt.timestamp():  # 即終了したもの
             continue
-        if target_date > updatedAt.date():  # 昨日以前に終了したものはスキップ
-            continue
-        if target_date < createdAt.date():  # 未来のものはスキップ
-            continue
-        if CONFIG.ignore_tag in [t.lower() for t in node.tags]:  # 特定のtagをスキップ
-            continue
+        if not make_blacklist:
+            if CONFIG.ignore_tag in [t.lower() for t in node.tags]:  # 特定のtagをスキップ
+                continue
+        if target_date is not None:
+            if target_date > updatedAt.date():  # 昨日以前に終了したものはスキップ
+                continue
+            if target_date < createdAt.date():  # 未来のものはスキップ
+                continue
 
         # データ追加
         run = Run(
