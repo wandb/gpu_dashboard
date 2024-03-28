@@ -369,7 +369,7 @@ def daily_summarize(df: pl.DataFrame) -> pl.DataFrame:
             .otherwise(pl.col("no_cap_utilization_rate"))
             .alias("utilization_rate"),
         )
-        .join(metrics_duraion_df, on=["date", "company_name"])
+        .join(metrics_duraion_df, on=["date", "company_name"], how="left")
         .sort(["date"], descending=True)
         .sort(["company_name"])
         .select(
