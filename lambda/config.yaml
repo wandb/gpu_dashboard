@@ -15,35 +15,35 @@ dashboard:
   tag_for_latest: latest
 
 companies:
-  - company: abeja-stockmark # ABEJA
-    teams:
-      - abeja-geniac
-      - stockmark-geniac
-    schedule:
-      - date: "2024-02-15"
-        assigned_gpu_node: 96
-    ignore_projects:
-      - 100b
-  # - company: abeja-geniac # ABEJA
+  # - company: abeja-stockmark # ABEJA
   #   teams:
   #     - abeja-geniac
+  #     - stockmark-geniac
   #   schedule:
   #     - date: "2024-02-15"
-  #       assigned_gpu_node: 48
+  #       assigned_gpu_node: 96
+  #   ignore_projects:
+  #     - 100b
+  - company: abeja-geniac # ABEJA
+    teams:
+      - abeja-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 48
   - company: pfe-geniac # PFE
     teams:
       - pfe-geniac
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 50
-  # - company: stockmark-geniac # Stockmark
-  #   teams:
-  #     - stockmark-geniac
-  #   schedule:
-  #     - date: "2024-02-15"
-  #       assigned_gpu_node: 48
-  #   ignore_projects:
-  #     - 100b
+  - company: stockmark-geniac # Stockmark
+    teams:
+      - stockmark-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 48
+    ignore_projects:
+      - 100b
   - company: turing-geniac # Turing
     teams:
       - turing-geniac

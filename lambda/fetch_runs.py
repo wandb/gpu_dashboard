@@ -203,7 +203,7 @@ def query_runs(team: str, project: str, target_date: dt.date) -> list[Run]:
             continue
         if target_date < createdAt.date():  # 未来のものはスキップ
             continue
-        if CONFIG.ignore_tag in node.tags:  # 特定のtagをスキップ
+        if CONFIG.ignore_tag in [t.lower() for t in node.tags]:  # 特定のtagをスキップ
             continue
 
         # データ追加
