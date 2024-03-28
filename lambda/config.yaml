@@ -3,16 +3,16 @@ ignore_tag: other_gpu
 tag: latest
 wandb_dir: /tmp
 
+dashboard:
+  entity: geniac-gpu
+  project: test-gpu-dashboard
+  artifact: version_20240227
+  tag_for_latest: latest
+
 dataset:
   entity: geniac-gpu
   project: gpu-dashboard-dev
   artifact: version_20240227
-
-dashboard:
-  entity: geniac-gpu
-  project: gpu-dashboard-dev
-  artifact: version_20240227
-  tag_for_latest: latest
 
 blacklist:
   entity: geniac-gpu

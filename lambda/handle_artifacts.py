@@ -133,7 +133,7 @@ def apply_blacklist(df: pl.DataFrame) -> pl.DataFrame:
             )
             .alias("run_path")
         )
-        .filter(pl.col("run_path") not in ignore_runpath)
+        .filter(~pl.col("run_path").is_in(ignore_runpath))
         .drop("run_path")
     )
 

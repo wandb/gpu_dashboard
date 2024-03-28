@@ -1,6 +1,7 @@
 import os
 import argparse
 import datetime as dt
+import pytz
 
 import wandb
 
@@ -26,7 +27,8 @@ def handler(event: dict[str, str], context: object) -> None:
     target_date: dt.date
     target_date_str = event.get("target_date")
     if target_date_str is None:
-        target_date = dt.date.today() + dt.timedelta(days=-1)
+        local_tz = pytz.timezone("Asia/Tokyo")
+        target_date = dt.datetime.now(local_tz).date() + dt.timedelta(days=-1)
     else:
         try:
             target_date = dt.datetime.strptime(target_date_str, "%Y-%m-%d").date()
