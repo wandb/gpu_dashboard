@@ -17,10 +17,12 @@ dashboard:
 blacklist:
   entity: geniac-gpu
   project: gpu-dashboard-dev
-  artifact: version_20240227
+  artifact: blacklist
 
 companies:
-  # - company: abeja-stockmark # ABEJA
+
+  ### ABEJA, Stockmark
+  # - company: abeja-stockmark 
   #   teams:
   #     - abeja-geniac
   #     - stockmark-geniac
@@ -29,19 +31,25 @@ companies:
   #       assigned_gpu_node: 96
   #   ignore_projects:
   #     - 100b
-  - company: abeja-geniac # ABEJA
+
+  ### ABEJA ###
+  - company: abeja-geniac 
     teams:
       - abeja-geniac
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
-  - company: pfe-geniac # PFE
+
+  ### PFE ###
+  - company: pfe-geniac 
     teams:
       - pfe-geniac
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 50
-  - company: stockmark-geniac # Stockmark
+
+  ### Stockmark ###
+  - company: stockmark-geniac 
     teams:
       - stockmark-geniac
     schedule:
@@ -49,7 +57,9 @@ companies:
         assigned_gpu_node: 48
     ignore_projects:
       - 100b
-  - company: turing-geniac # Turing
+
+  ### Turing ###
+  - company: turing-geniac 
     teams:
       - turing-geniac
     schedule:
@@ -57,13 +67,17 @@ companies:
         assigned_gpu_node: 4
       - date: "2024-06-15"
         assigned_gpu_node: 35
-  - company: nii-geniac # NII
+
+  ### NII ###
+  - company: nii-geniac 
     teams:
       - nii-geniac
     schedule:
       - date: "2024-04-15"
         assigned_gpu_node: 75
-  - company: weblab-geniac # Matsuo LB
+
+  ### Matsuo LB ###
+  - company: weblab-geniac 
     teams:
       - weblab-geniac1
       - weblab-geniac2
@@ -76,7 +90,9 @@ companies:
     schedule:
       - date: "2024-04-15"
         assigned_gpu_node: 21
-  - company: sakanaai-geniac # Sakana AI
+
+  ### Sakana AI ###
+  - company: sakanaai-geniac 
     teams:
       - sakanaai-geniac
     schedule:

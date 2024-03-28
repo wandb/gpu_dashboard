@@ -1,11 +1,17 @@
+from dataclasses import dataclass
 import json
-from typing import Union
 
 from tqdm import tqdm
 import wandb
 
 from config import CONFIG
-from fetch_runs import plant_trees, Project, query_runs
+from fetch_runs import Project, plant_trees, query_runs
+
+
+@dataclass
+class BlacklistRow:
+    run_path: str
+    tags: list[str]
 
 
 def update_blacklist() -> None:
@@ -14,7 +20,7 @@ def update_blacklist() -> None:
     return None
 
 
-def create_blacklist() -> list[Union[str, list[str]]]:
+def create_blacklist() -> list[BlacklistRow]:
     trees = plant_trees()
 
     print("Get projects for each team ...")
@@ -40,12 +46,12 @@ def create_blacklist() -> list[Union[str, list[str]]]:
         for project in tree.projects:
             for run in project.runs:
                 if CONFIG.ignore_tag in [t.lower() for t in run.tags]:
-                    blacklist.append([run.run_path, run.tags])
+                    blacklist.append(BlacklistRow(run_path=run.run_path, tags=run.tags))
 
     return blacklist
 
 
-def upload_blacklist(blacklist: list[Union[str, list[str]]]) -> None:
+def upload_blacklist(blacklist: list[BlacklistRow]) -> None:
     with wandb.init(
         entity=CONFIG.blacklist.entity,
         project=CONFIG.blacklist.project,
@@ -60,7 +66,13 @@ def upload_blacklist(blacklist: list[Union[str, list[str]]]) -> None:
             metadata={"record_count": len(blacklist)},
         )
         with open(json_path, "w") as f:
-            json.dump(blacklist, f, indent=4, sort_keys=True, ensure_ascii=False)
+            json.dump(
+                [b.__dict__ for b in blacklist],
+                f,
+                indent=4,
+                sort_keys=True,
+                ensure_ascii=False,
+            )
         artifact.add_file(local_path=json_path)
         run.log_artifact(artifact)
 

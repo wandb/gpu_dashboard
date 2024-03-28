@@ -1,4 +1,6 @@
 import datetime as dt
+import json
+from pathlib import Path
 
 import pandas as pd
 import polars as pl
@@ -10,7 +12,9 @@ from config import CONFIG
 def handle_artifacts(new_runs_df: pl.DataFrame, target_date: dt.date) -> pl.DataFrame:
     target_date_str = target_date.strftime("%Y-%m-%d")
     old_runs_df = read_artifacts()
-    all_runs_df = update_df(new_runs_df=new_runs_df, old_runs_df=old_runs_df)
+    all_runs_df = combine_df(new_runs_df=new_runs_df, old_runs_df=old_runs_df).pipe(
+        apply_blacklist
+    )
     update_artifacts(all_runs_df=all_runs_df, target_date_str=target_date_str)
     return all_runs_df
 
@@ -20,7 +24,7 @@ def read_artifacts() -> pl.DataFrame:
     with wandb.init(
         entity=CONFIG.dashboard.entity,
         project=CONFIG.dashboard.project,
-        name=f"Read",
+        name=f"Read_dataset",
     ) as run:
         try:
             # 変数
@@ -31,8 +35,8 @@ def read_artifacts() -> pl.DataFrame:
             # ダウンロード
             artifact_path = f"{entity}/{project}/{artifact_name}:latest"
             artifact = run.use_artifact(f"{artifact_path}")
-            artifact_dir = artifact.download(wandb_dir)
-            csv_path = f"{artifact_dir}/{artifact_name}.csv"
+            artifact_dir = Path(artifact.download(wandb_dir))
+            csv_path = artifact_dir / f"{artifact_name}.csv"
             old_runs_df = pl.from_pandas(
                 pd.read_csv(
                     csv_path,
@@ -52,7 +56,7 @@ def read_artifacts() -> pl.DataFrame:
             return old_runs_df
 
 
-def update_df(new_runs_df: pl.DataFrame, old_runs_df: pl.DataFrame) -> pl.DataFrame:
+def combine_df(new_runs_df: pl.DataFrame, old_runs_df: pl.DataFrame) -> pl.DataFrame:
     if old_runs_df.is_empty():
         all_runs_df = new_runs_df.clone()
     else:
@@ -101,3 +105,36 @@ def update_artifacts(all_runs_df: pl.DataFrame, target_date_str: str) -> None:
         artifact.add_file(local_path=csv_path)
         run.log_artifact(artifact)
     return None
+
+
+def apply_blacklist(df: pl.DataFrame) -> pl.DataFrame:
+    with wandb.init(
+        entity=CONFIG.blacklist.entity,
+        project=CONFIG.blacklist.project,
+        name=f"Read_blacklist",
+    ) as run:
+        # 変数
+        entity = CONFIG.blacklist.entity
+        project = CONFIG.blacklist.project
+        artifact_name = CONFIG.blacklist.artifact
+        wandb_dir = CONFIG.wandb_dir
+        # ダウンロード
+        artifact_path = f"{entity}/{project}/{artifact_name}:latest"
+        artifact = run.use_artifact(f"{artifact_path}")
+        artifact_dir = Path(artifact.download(wandb_dir))
+        with open(artifact_dir / f"{artifact_name}.json") as f:
+            blacklist = json.load(f)
+        ignore_runpath = [b["run_path"] for b in blacklist]
+    new_df = (
+        df.with_columns(
+            pl.struct("company_name", "project", "run_id")
+            .map_elements(
+                lambda x: "/".join((x["company_name"], x["project"], x["run_id"]))
+            )
+            .alias("run_path")
+        )
+        .filter(pl.col("run_path") not in ignore_runpath)
+        .drop("run_path")
+    )
+
+    return new_df
