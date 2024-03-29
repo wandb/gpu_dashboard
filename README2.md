@@ -1,6 +1,33 @@
 # gpu-dashboard
 ## アーキテクチャ
+![アーキテクチャ](./image/gpu-dashboard.drawio.png)
 ## このリポジトリのディレクトリ構成
+```
+.
+├── README.md
+├── README2.md
+├── check-dashboard
+│   ├── Dockerfile
+│   ├── check_dashboard.py
+│   ├── config.yaml
+│   └── requirements.txt
+├── gpu-dashboard
+│   ├── Dockerfile
+│   ├── GpuUsage.py
+│   ├── blacklist
+│   ├── blank_table.py
+│   ├── config.py
+│   ├── config.yaml
+│   ├── fetch_runs.py
+│   ├── handle_artifacts.py
+│   ├── remove_tags.py
+│   ├── requirements.txt
+│   ├── run.py
+│   ├── update_blacklist.py
+│   └── update_tables.py
+└── image
+    └── gpu-dashboard.drawio.png
+```
 ## ローカルの環境構築
 ## デプロイ
 ### イメージのプッシュ
