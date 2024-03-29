@@ -7,7 +7,7 @@ from config import CONFIG
 def remove_tags() -> None:
     """プロジェクトのrunsからタグを削除する"""  # TODO リファクタ
     # get runs
-    n_delete = (len(CONFIG.companies) + 4) * 3  # +4はAlertとRead_datesetとRead_blacklistとUpdateの分
+    n_delete = (len(CONFIG.companies) + 5) * 3  # +5はAlert2回分とRead_datesetとRead_blacklistとUpdateの分
     api = wandb.Api()
     project_path = f"{CONFIG.dashboard.entity}/{CONFIG.dashboard.project}"
     runs = api.runs(path=project_path)

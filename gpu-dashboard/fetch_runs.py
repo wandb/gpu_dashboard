@@ -248,7 +248,7 @@ def alert_overlap_runs(alert_texts: list[str]) -> None:
     with wandb.init(
         entity=CONFIG.dashboard.entity,
         project=CONFIG.dashboard.project,
-        name=f"Alert",
+        name=f"Alert_overlap",
     ) as run:
         for alert_text in alert_texts:
             wandb.alert(title="Overlap of runs found", text=alert_text)

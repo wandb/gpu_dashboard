@@ -173,4 +173,4 @@ cdk.out
 **/debug.ipynb
 **/run.py
 **/command.sh
-**/blacklist/blacklist.json
+**/blacklist/*.json
