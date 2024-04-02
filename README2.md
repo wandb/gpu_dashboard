@@ -29,6 +29,28 @@
     └── gpu-dashboard.drawio.png
 ```
 ## ローカルの環境構築
+## 処理手順
+- 最新データ取得
+    - target_dateを設定
+    - companyのリストを作成
+    - companyごとにprojectを取得[API]
+    - projectごとにrunを取得[API]
+        - target_date、tagsフィルタリング
+    - 同じインスタンスで複数回wanb.initをしているrunを検出しアラート
+    - runごとにsystem metricsを取得[API]
+    - run id x 日付で集計
+- データ更新
+    - 昨日までのcsvをArtifactsから取得
+    - 最新分をconcatしてArtifactsに保存
+    - run idのフィルタリング
+- 集計
+    - overallを集計
+    - monthlyを集計
+    - daily companyを集計
+- テーブル更新
+    - latestタグをリセット
+    - テーブルを出力
+
 ## デプロイ
 ### イメージのプッシュ
 ### ECR
