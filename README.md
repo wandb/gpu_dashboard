@@ -22,38 +22,26 @@ The repository has been tested in the above environment. It is not necessary to 
 
 ```
 .
-├── GpuUsage　# Provision resources
-│   ├── GpuUsasge_stack.py
-│   └── __init__.py
-├── lambda  # Create Docker container images
-│   ├── Dockerfile
-│   ├── GpuUsage.py  # Write the code to be executed by Lambda
-│   ├── config.yaml
-│   └── requirements.txt
-├── tests  # Test code (not yet organized)
-│   ├── __init__.py
-│   └── unit
-│       ├── __init__.py
-│       └── test_GpuUsage_stack.py
-├── .env  # To be created individually
 ├── README.md
-├── app.py
-├── cdk.json  # Configuration file for provisioning
-├── requirements-dev.txt
-├── requirements.txt
-└── source.bat  # Batch file for Windows
+└── gpu-dashboard
+    ├── Dockerfile
+    ├── blacklist
+    ├── requirements.txt
+    ├── config.yaml
+    ├── GpuUsage.py
+    ├── blank_table.py
+    ├── config.py
+    ├── fetch_runs.py
+    ├── handle_artifacts.py
+    ├── remove_tags.py
+    ├── update_blacklist.py
+    └── update_tables.py
 ```
 
 ## Development Environment Setup
 
 ### Environment Preparation
-1. Create a .env file and include the following content
-
-```
-WANDB_API_KEY="YOUR_API_KEY"
-```
-
-2. Ensure that the aws cli is configured with the appropriate credentials and region
+1. Ensure that the aws cli is configured with the appropriate credentials and region
 
 ```bash
 $ aws configure list
@@ -66,18 +54,42 @@ secret_key     ******************** shared-credentials-file
     region           ap-northeast-1      config-file    ~/.aws/config
 ```
 
-
-3. If using CDK for the first time, set it up
-```
-$ npm install -g aws-cdk
-```
-
-4. Create a Python virtual environment
+2. For debugging, create a Python virtual environment
 ```bash
+$ cd gpu-dashboard
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
+
+3. Go to AWS console and move to Elastic Container Registry
+
+- ECR作成
+Amazon ECR > プライベートレジストリ > リポジトリ
+geniac-gpuという名前のリポジトリを作ります
+作成したリポジトリに移動し、"プッシュコマンドの表示"をクリックします
+4つのコマンドが表示されるので順番に実行します。
+
+コマンド例
+```bash
+$ aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 111122223333.dkr.ecr.ap-northeast-1.amazonaws.com
+$ docker build -t geniac-gpu .
+$ docker tag geniac-gpu:latest 111122223333.dkr.ecr.ap-northeast-1.amazonaws.com/geniac-gpu:latest
+$ docker push 111122223333.dkr.ecr.ap-northeast-1.amazonaws.com/geniac-gpu:latest
+```
+
+https://dev.classmethod.jp/articles/eventbridge-scheduler-regularly-start-and-stop-ecs-tasks/
+
+- VPC作成
+VPCに移動します
+VPC作成
+サブネット作成
+
+- ECS
+クラスター作成
+タスク定義
+タスク実行ロール
+
 
 ### Provisioning & Deployment
 Start Docker and perform provisioning and deployment

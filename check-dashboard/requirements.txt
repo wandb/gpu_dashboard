@@ -1,0 +1,4 @@
+wandb==0.16.1
+easydict==1.12
+PyYAML
+pytz
