@@ -235,5 +235,12 @@ def update_companies(
                     ),
                 }
             )
+            if CONFIG.enable_alert & (
+                gpu_daily_company_table["GPU稼働率(%)"].to_list()[0] < 10
+            ):
+                latest_row_dict = gpu_daily_company_table.to_pandas().to_dict(
+                    orient="records"
+                )[0]
+                wandb.alert(title="Too low utilization rate found.", text=str(latest_row_dict))
 
     return None
