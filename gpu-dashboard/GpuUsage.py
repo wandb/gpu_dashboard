@@ -37,6 +37,7 @@ def handler(event: dict[str, str], context: object) -> None:
 
     # Check
     print(f"Test mode: {CONFIG.testmode}")
+    print(f"Enable alert: {CONFIG.enable_alert}")
     print(f"Default entity: {wandb.api.default_entity}")
     print(f"Target date: {target_date}")
 

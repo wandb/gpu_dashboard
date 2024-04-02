@@ -1,35 +1,24 @@
 testmode: false
+enable_alert: true
 ignore_tag: other_gpu
 wandb_dir: /tmp
 
 dashboard:
   entity: geniac-gpu
   project: test-gpu-dashboard
-  artifact: version_20240227
   tag_for_latest: latest
 
 dataset:
   entity: geniac-gpu
-  project: gpu-dashboard-dev
-  artifact: version_20240227
+  project: test-gpu-dashboard
+  artifact_name: version_20240227
 
 blacklist:
   entity: geniac-gpu
-  project: gpu-dashboard-dev
-  artifact: blacklist
+  project: test-gpu-dashboard
+  artifact_name: blacklist
 
 companies:
-
-  ### ABEJA, Stockmark
-  # - company: abeja-stockmark 
-  #   teams:
-  #     - abeja-geniac
-  #     - stockmark-geniac
-  #   schedule:
-  #     - date: "2024-02-15"
-  #       assigned_gpu_node: 96
-  #   ignore_projects:
-  #     - 100b
 
   ### ABEJA ###
   - company: abeja-geniac 

@@ -55,13 +55,14 @@ def upload_blacklist(blacklist: list[BlacklistRow]) -> None:
     with wandb.init(
         entity=CONFIG.blacklist.entity,
         project=CONFIG.blacklist.project,
-        name=f"Blacklist",
+        name="Update Blacklist",
         job_type="update-blacklist",
         tags=[],
     ) as run:
-        json_path = f"blacklist/{CONFIG.blacklist.artifact}.json"
+        filename = CONFIG.blacklist.artifact_name
+        json_path = f"blacklist/{filename}.json"
         artifact = wandb.Artifact(
-            name=CONFIG.blacklist.artifact,
+            name=filename,
             type="dataset",
             metadata={"record_count": len(blacklist)},
         )

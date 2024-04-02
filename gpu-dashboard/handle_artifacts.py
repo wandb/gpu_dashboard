@@ -24,13 +24,13 @@ def read_artifacts() -> pl.DataFrame:
     with wandb.init(
         entity=CONFIG.dashboard.entity,
         project=CONFIG.dashboard.project,
-        name=f"Read_dataset",
+        name=f"Read Dataset",
     ) as run:
         try:
             # 変数
             entity = CONFIG.dataset.entity
             project = CONFIG.dataset.project
-            artifact_name = CONFIG.dataset.artifact
+            artifact_name = CONFIG.dataset.artifact_name
             wandb_dir = CONFIG.wandb_dir
             # ダウンロード
             artifact_path = f"{entity}/{project}/{artifact_name}:latest"
@@ -96,10 +96,11 @@ def update_artifacts(all_runs_df: pl.DataFrame, target_date_str: str) -> None:
         project=CONFIG.dashboard.project,
         name=f"Update_{target_date_str}",
     ) as run:
-        csv_path = f"{CONFIG.wandb_dir}/{CONFIG.dashboard.artifact}.csv"
+        filename = CONFIG.dataset.artifact_name
+        csv_path = f"{CONFIG.wandb_dir}/{filename}.csv"
         all_runs_df.write_csv(csv_path)
         artifact = wandb.Artifact(
-            name=CONFIG.dashboard.artifact,
+            name=filename,
             type="dataset",
         )
         artifact.add_file(local_path=csv_path)
@@ -111,12 +112,12 @@ def apply_blacklist(df: pl.DataFrame) -> pl.DataFrame:
     with wandb.init(
         entity=CONFIG.blacklist.entity,
         project=CONFIG.blacklist.project,
-        name=f"Read_blacklist",
+        name=f"Read Blacklist",
     ) as run:
         # 変数
         entity = CONFIG.blacklist.entity
         project = CONFIG.blacklist.project
-        artifact_name = CONFIG.blacklist.artifact
+        artifact_name = CONFIG.blacklist.artifact_name
         wandb_dir = CONFIG.wandb_dir
         # ダウンロード
         artifact_path = f"{entity}/{project}/{artifact_name}:latest"
