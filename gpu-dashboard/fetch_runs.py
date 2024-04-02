@@ -67,7 +67,6 @@ class Tree:
     start_date: dt.date
     ignore_projects: list[str]
     projects: list[Project] = None
-    runs: list[Run] = None
 
 
 def fetch_runs(target_date: dt.datetime):
@@ -243,7 +242,7 @@ def find_overlap_runs(runs: list[Run]) -> list[str]:
 
 
 def alert_overlap_runs(alert_texts: list[str]) -> None:
-    if (not alert_texts) | CONFIG.testmode:
+    if not CONFIG.enable_alert:
         return None
     with wandb.init(
         entity=CONFIG.dashboard.entity,
