@@ -16,7 +16,6 @@ def fillna_round(srs: pl.Series) -> pl.Series:
 
 
 TMP_COLS = (
-    (pl.col("duration_hour") * pl.col("gpu_count")).alias("gpu_hour"),
     pl.when(pl.col("average_gpu_utilization").is_not_null())
     .then(pl.col("duration_hour"))
     .otherwise(None)
@@ -28,8 +27,6 @@ TMP_COLS = (
 )
 
 AGG_COLS = (
-    pl.col("duration_hour").sum().alias("total_duration_hour"),
-    pl.col("gpu_hour").sum().alias("total_gpu_hour"),
     pl.col("assigned_gpu_node")
     .first()
     .mul(GPU_PER_NODE * HOURS_PER_DAY)
@@ -44,13 +41,6 @@ AGG_COLS = (
 )
 
 METRICS_COLS = (
-    # save as different name
-    pl.col("total_gpu_hour").alias("_total_gpu_hour"),
-    # apply cap to total_gpu_hour
-    pl.when(pl.col("total_gpu_hour") > pl.col("assigned_gpu_hour"))
-    .then(pl.col("assigned_gpu_hour"))
-    .otherwise(pl.col("total_gpu_hour"))
-    .alias("total_gpu_hour"),
     # apply cap to utilization_rate
     pl.when(pl.col("total_gpu_hour") > pl.col("assigned_gpu_hour"))
     .then(MAX_PERCENT)
@@ -82,7 +72,6 @@ SELECT_COLS = (
     pl.col("assigned_gpu_node"),
     pl.col("assigned_gpu_hour"),
     pl.col("_total_gpu_hour"),
-    pl.col("total_duration_hour"),
     pl.col("total_metrics_hour"),
 )
 
@@ -111,21 +100,66 @@ def add_team(all_runs_df: pl.DataFrame, team_table: pl.DataFrame) -> pl.DataFram
     return all_runs_df_without_team
 
 
+def agg_gpu_hour(
+    all_runs_df: pl.DataFrame, target_date: dt.date, keys: list[str]
+) -> pl.DataFrame:
+    bt = BlankTable(target_date=target_date)
+    all_runs_df_without_team = add_team(
+        all_runs_df=all_runs_df, team_table=bt.team_table
+    )
+    gpu_hour_df = (
+        bt.daily_table.join(
+            all_runs_df_without_team,
+            on=["company", "date"],
+            how="left",
+        )
+        .with_columns((pl.col("duration_hour") * pl.col("gpu_count")).alias("gpu_hour"))
+        .group_by("company", "date")
+        .agg(
+            pl.col("gpu_hour").sum().pipe(fillna_round).alias("total_gpu_hour"),
+            pl.col("assigned_gpu_node")
+            .first()
+            .mul(GPU_PER_NODE * HOURS_PER_DAY)
+            .alias("assigned_gpu_hour"),
+        )
+        .with_columns(
+            pl.col("total_gpu_hour").alias("_total_gpu_hour"),
+            pl.when(pl.col("total_gpu_hour") > pl.col("assigned_gpu_hour"))
+            .then(pl.col("assigned_gpu_hour"))
+            .otherwise(pl.col("total_gpu_hour"))
+            .alias("total_gpu_hour"),
+        )
+        .drop("assigned_gpu_hour")
+        .with_columns(pl.col("date").dt.strftime("%Y-%m").alias("year_month"))
+        .group_by(keys)
+        .agg(pl.col("total_gpu_hour").sum(), pl.col("_total_gpu_hour").sum())
+        .sort(["company"])
+    )
+
+    return gpu_hour_df
+
+
 def agg_daily(all_runs_df: pl.DataFrame, target_date: dt.date) -> pl.DataFrame:
     bt = BlankTable(target_date=target_date)
     all_runs_df_without_team = add_team(
         all_runs_df=all_runs_df, team_table=bt.team_table
     )
+    keys = ["company", "date"]
+
     gpu_daily_table = (
         bt.daily_table.join(
             all_runs_df_without_team,
-            left_on=["company", "date"],
-            right_on=["company", "date"],
+            on=keys,
             how="left",
         )
         .with_columns(*TMP_COLS)
-        .group_by("company", "date")
+        .group_by(keys)
         .agg(*AGG_COLS)
+        .join(
+            agg_gpu_hour(all_runs_df=all_runs_df, target_date=target_date, keys=keys),
+            on=keys,
+            how="left",
+        )
         .with_columns(*METRICS_COLS)
         .select(
             pl.col("company").alias("企業名"),
@@ -144,16 +178,22 @@ def agg_monthly(all_runs_df: pl.DataFrame, target_date: dt.date) -> pl.DataFrame
     all_runs_df_without_team = add_team(
         all_runs_df=all_runs_df, team_table=bt.team_table
     ).with_columns(pl.col("date").dt.strftime("%Y-%m").alias("year_month"))
+    keys = ["company", "year_month"]
+
     gpu_monthly_table = (
         bt.monthy_table.join(
             all_runs_df_without_team,
-            left_on=["company", "year_month"],
-            right_on=["company", "year_month"],
+            on=keys,
             how="left",
         )
         .with_columns(*TMP_COLS)
-        .group_by("company", "year_month")
+        .group_by(keys)
         .agg(*AGG_COLS)
+        .join(
+            agg_gpu_hour(all_runs_df=all_runs_df, target_date=target_date, keys=keys),
+            on=keys,
+            how="left",
+        )
         .with_columns(*METRICS_COLS)
         .select(
             pl.col("company").alias("企業名"),
@@ -172,16 +212,22 @@ def agg_overall(all_runs_df: pl.DataFrame, target_date: dt.date) -> pl.DataFrame
     all_runs_df_without_team = add_team(
         all_runs_df=all_runs_df, team_table=bt.team_table
     )
+    keys = ["company"]
+
     gpu_overall_table = (
         bt.overall_table.join(
             all_runs_df_without_team,
-            left_on=["company"],
-            right_on=["company"],
+            on=keys,
             how="left",
         )
         .with_columns(*TMP_COLS)
-        .group_by("company")
+        .group_by(keys)
         .agg(*AGG_COLS)
+        .join(
+            agg_gpu_hour(all_runs_df=all_runs_df, target_date=target_date, keys=keys),
+            on=keys,
+            how="left",
+        )
         .with_columns(*METRICS_COLS)
         .select(pl.col("company").alias("企業名"), *SELECT_COLS)
         .sort(["企業名"])
