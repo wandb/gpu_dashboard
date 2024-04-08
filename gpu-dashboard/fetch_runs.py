@@ -251,6 +251,7 @@ def alert_overlap_runs(alert_texts: list[str]) -> None:
     ) as run:
         if alert_texts:
             for alert_text in alert_texts:
+                print(alert_text)
                 wandb.alert(title="Overlap of runs found", text=alert_text)
         else:
             print("No overlaps found.")
