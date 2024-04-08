@@ -133,10 +133,7 @@ def agg_gpu_hour(
         .with_columns(pl.col("date").dt.strftime("%Y-%m").alias("year_month"))
         .group_by(keys)
         .agg(pl.col("total_gpu_hour").sum(), pl.col("_total_gpu_hour").sum())
-        .select(
-            *keys,
-            "total_gpu_hour",
-            "_total_gpu_hour")
+        .select(*keys, "total_gpu_hour", "_total_gpu_hour")
         .sort(["company"])
     )
 
