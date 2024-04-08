@@ -174,3 +174,4 @@ cdk.out
 **/run.py
 **/command.sh
 **/blacklist/*.json
+**/deploy.sh
