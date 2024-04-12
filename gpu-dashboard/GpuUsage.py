@@ -1,7 +1,9 @@
 import os
 import argparse
 import datetime as dt
+import functools
 import pytz
+import traceback
 
 import wandb
 
@@ -10,6 +12,31 @@ from fetch_runs import fetch_runs
 from handle_artifacts import handle_artifacts
 from remove_tags import remove_tags
 from update_tables import update_tables
+
+
+def wandb_alert(alert_title: str, error_message: str) -> None:
+    with wandb.init(
+        entity=CONFIG.dashboard.entity,
+        project=CONFIG.dashboard.project,
+        name=alert_title,
+    ) as run:
+        wandb.alert(title=alert_title, text=error_message)
+
+    return None
+
+
+def error_handler(func: callable) -> callable:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            error_message = traceback.format_exc()
+            print(error_message)
+            wandb_alert(alert_title="Runtime Error", error_message=error_message)
+            raise
+
+    return wrapper
 
 
 def handler(event: dict[str, str], context: object) -> None:

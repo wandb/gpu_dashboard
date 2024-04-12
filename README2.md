@@ -1,17 +1,17 @@
 # gpu-dashboard
 ## アーキテクチャ
 ![アーキテクチャ](./image/gpu-dashboard.drawio.png)
+
 ## このリポジトリのディレクトリ構成
 ```
 .
 ├── README.md
-├── README2.md
-├── check-dashboard
+├── check-dashboard  # for monitoring cron
 │   ├── Dockerfile
 │   ├── check_dashboard.py
 │   ├── config.yaml
 │   └── requirements.txt
-├── gpu-dashboard
+├── gpu-dashboard  # for cron
 │   ├── Dockerfile
 │   ├── GpuUsage.py
 │   ├── blacklist
@@ -28,8 +28,16 @@
 └── image
     └── gpu-dashboard.drawio.png
 ```
+
 ## ローカルの環境構築
-## 処理手順
+Execute below command in check-dashboard directory and gpu-dashboard directory.
+```
+$ python3 -m venv .venv
+$ . .venv/bin/activate
+$ pip install requirements.txt
+```
+
+## プログラムの処理内容
 - 最新データ取得
     - target_dateを設定
     - companyのリストを作成
@@ -51,13 +59,31 @@
     - latestタグをリセット
     - テーブルを出力
 
-## デプロイ
-### イメージのプッシュ
-### ECR
-### VPC
-### ECS
-## デバッグ
+### AWS
+- アカウント払出し・権限付与
+- IAM作成
+- AWS CLIの疎通確認
 
-https://qiita.com/RyoMar/items/06e23d60d9df2d955221
-https://qiita.com/ramunauna/items/f52cdcaeadedf40e5d22
-https://note.com/yuta_shimada/n/n1563c94594ab
+#### ECR
+- リポジトリ作成
+- イメージのプッシュ
+```bash
+$ docker
+```
+
+#### VPC
+- VPC作成
+- サブネット作成
+
+#### ECS
+- クラスタ作成
+- タスク定義
+- タスク作成
+
+## デバッグ
+## ロギング
+## チェックスクリプト
+
+https://qiita.com/RyoMar/items/06e23d60d9df2d955221  
+https://qiita.com/ramunauna/items/f52cdcaeadedf40e5d22  
+https://note.com/yuta_shimada/n/n1563c94594ab  
