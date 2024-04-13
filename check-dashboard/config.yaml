@@ -20,17 +20,6 @@ blacklist:
 
 companies:
 
-  ### ABEJA, Stockmark
-  # - company: abeja-stockmark 
-  #   teams:
-  #     - abeja-geniac
-  #     - stockmark-geniac
-  #   schedule:
-  #     - date: "2024-02-15"
-  #       assigned_gpu_node: 96
-  #   ignore_projects:
-  #     - 100b
-
   ### ABEJA ###
   - company: abeja-geniac 
     teams:
