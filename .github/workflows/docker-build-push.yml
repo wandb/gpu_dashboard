@@ -35,5 +35,5 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} # ここでECR_REGISTRYを設定
       run: |
         cd gpu-dashboard
-        docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+        docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .      
+        docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}   
