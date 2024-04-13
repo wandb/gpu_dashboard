@@ -3,12 +3,12 @@ name: Docker Build & Push to Amazon ECR
 on:
   push:
     branches: [main]
+    paths:                                                                                                        
+      - 'gpu-dashboard/**'      
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   ECR_REPOSITORY: test-github-actions
-  paths:                                                                                                        
-    - 'gpu-dashboard/**'      
 
 jobs:
   build-and-push:
