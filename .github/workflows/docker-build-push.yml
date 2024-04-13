@@ -6,7 +6,7 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: my-ecr-repo
+  ECR_REPOSITORY: genic-gpu
   IMAGE_TAG: latest
 
 jobs:
@@ -34,5 +34,6 @@ jobs:
         IMAGE_TAG: ${{ github.sha }}
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} # ここでECR_REGISTRYを設定
       run: |
+        cd gpu-dashboard
         docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
         docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
