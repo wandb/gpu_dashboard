@@ -69,7 +69,7 @@ class Tree:
     projects: list[Project] = None
 
 
-def fetch_runs(target_date: dt.datetime):
+def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
     """新しいrunを取得し、データを整形して返す"""
     trees = plant_trees()
 
