@@ -48,6 +48,9 @@ def daily_table(target_date: dt.date) -> pl.DataFrame:
                 pl.col("company").cast(pl.Utf8),
                 pl.col("date").cast(pl.Date),
                 pl.col("assigned_gpu_node").cast(pl.Int64),
+            ).filter(
+                # 提供終了した日付は削除
+                pl.col("assigned_gpu_node")>0
             )
         )
         df_list.append(company_schedule_df)

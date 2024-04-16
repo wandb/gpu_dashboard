@@ -65,6 +65,7 @@ class Project:
 class Tree:
     team: str
     start_date: dt.date
+    end_date: dt.date
     ignore_projects: list[str]
     projects: list[Project] = None
 
@@ -75,13 +76,14 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
 
     print("Get projects for each team ...")
     for tree in trees:
-        if target_date >= tree.start_date:
+        if (target_date >= tree.start_date) & (target_date < tree.end_date):
             projects = [
                 Project(project=p.name)
                 for p in wandb.Api().projects(tree.team)
                 if p.name not in tree.ignore_projects
             ]
         else:
+            print(f"{tree.team}: Not started yet or already ended.")
             projects = []
         tree.projects = projects
 
@@ -148,19 +150,33 @@ def plant_trees() -> list[Tree]:
         start_date = df["date"].min()
         return start_date
 
+    def get_end_date(company_schedule: list[EasyDict]) -> dt.date:
+        """GPU割り当て終了日を取得する"""
+        df = pl.DataFrame(company_schedule).with_columns(
+            pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
+        )
+        last_row = df.sort("date")[-1]
+        if last_row["assigned_gpu_node"].item() == 0:
+            return last_row["date"].item()
+        else:
+            return dt.date(2100, 1, 1)
+
     trees = []
     for comp in CONFIG.companies:
         for team in comp.teams:
             tree = Tree(
                 team=team,
-                start_date=get_start_date(comp.schedule),
+                start_date=get_start_date(company_schedule=comp.schedule),
+                end_date=get_end_date(company_schedule=comp.schedule),
                 ignore_projects=comp.get("ignore_projects", ""),
             )
             trees.append(tree)
     return trees
 
 
-def query_runs(team: str, project: str, target_date: dt.date, make_blacklist=False) -> list[Run]:
+def query_runs(
+    team: str, project: str, target_date: dt.date, make_blacklist=False
+) -> list[Run]:
     if CONFIG.testmode:
         if team != "stockmark-geniac":
             return []
@@ -199,7 +215,9 @@ def query_runs(team: str, project: str, target_date: dt.date, make_blacklist=Fal
         if createdAt.timestamp() == updatedAt.timestamp():  # 即終了したもの
             continue
         if not make_blacklist:
-            if CONFIG.ignore_tag in [t.lower() for t in node.tags]:  # 特定のtagをスキップ
+            if CONFIG.ignore_tag in [
+                t.lower() for t in node.tags
+            ]:  # 特定のtagをスキップ
                 continue
         if target_date is not None:
             if target_date > updatedAt.date():  # 昨日以前に終了したものはスキップ

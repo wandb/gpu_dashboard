@@ -6,6 +6,7 @@ wandb_dir: /tmp
 dashboard:
   entity: geniac-gpu
   project: test-gpu-dashboard
+  # project: gpu-dashboard-dev  # for development
   tag_for_latest: latest
 
 dataset:
@@ -27,6 +28,8 @@ companies:
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
+      - date: "2024-04-15" # end of GPU provision
+        assigned_gpu_node: 0
 
   ### PFE ###
   - company: pfe-geniac 
@@ -43,6 +46,8 @@ companies:
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 48
+      - date: "2024-04-15" # end of GPU provision
+        assigned_gpu_node: 0
     ignore_projects:
       - 100b
 
