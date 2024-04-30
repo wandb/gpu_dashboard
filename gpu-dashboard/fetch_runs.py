@@ -225,17 +225,26 @@ def query_runs(
             if target_date < createdAt.date():  # 未来のものはスキップ
                 continue
 
+        run_path = ("/").join((team, project, node.name))
+
+        # 分散学習のGPU数を取得
+        true_gpu_count = get_true_gpu_count(run_path=run_path)
+        if true_gpu_count is None:
+            gpu_count = node.runInfo.gpuCount
+        else:
+            gpu_count = true_gpu_count
+
         # データ追加
         run = Run(
             run_id=node.name,
-            run_path=("/").join((team, project, node.name)),
+            run_path=run_path,
             updated_at=updatedAt,
             created_at=createdAt,
             state=node.state,
             tags=node.tags,
             host_name=node.host,
             gpu_name=node.runInfo.gpu,
-            gpu_count=node.runInfo.gpuCount,
+            gpu_count=gpu_count,
         )
         runs.append(run)
     return runs
@@ -439,3 +448,13 @@ def get_new_run_df(
         "testmode",
     )
     return new_run_df
+
+def get_true_gpu_count(run_path: str) -> int:
+    api = wandb.Api()
+    run = api.run(run_path)
+    config = run.config
+    gpu_count = config.get("world_size")
+    if gpu_count is None:
+        return None
+    else:
+        return gpu_count
