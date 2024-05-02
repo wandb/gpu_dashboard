@@ -158,6 +158,32 @@ $ docker push 111122223333.dkr.ecr.ap-northeast-1.amazonaws.com/geniac-gpu:lates
 
 上記手順を`gpu-dashboard`ディレクトリと`check-dashboard`ディレクトリにてそれぞれ行うこと
 
+## デバッグ
+### ローカルの環境構築
+下記のコマンドを実行して、定期実行スクリプトのpython環境を構築する。  
+`debug.ipynb`というファイルを作成してデバッグすると良い。  
+`config.yaml`を編集することで本番環境への影響を抑えられる。  
+
+```shell
+$ cd gpu-dashboard
+$ python3 -m venv .venv
+$ . .venv/bin/activate
+```
+
+同様に、下記のコマンドを実行して、定期実行チェックスクリプトのpython環境を構築する。  
+このディレクトリでも同様に`debug.ipynb`というファイルを作成してデバッグすると良い。  
+
+```shell
+$ cd check-dashboard
+$ python3 -m venv .venv
+$ . .venv/bin/activate
+```
+
+### ログの確認方法
+- AWSで`CloudWatch > ロググループ`に移動する
+- `/ecs/{タスク定義名}`をクリックする
+- ログストリームをクリックしてログを確認する
+
 ## Appendix
 ### プログラムの処理手順
 - 最新データ取得
@@ -180,9 +206,3 @@ $ docker push 111122223333.dkr.ecr.ap-northeast-1.amazonaws.com/geniac-gpu:lates
 - テーブル更新
     - latestタグをリセット
     - テーブルを出力
-
-### デバッグ
-work in progress ...
-
-### ログの確認方法
-work in progress ...
