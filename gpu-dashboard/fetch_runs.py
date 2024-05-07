@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import datetime as dt
+from fnmatch import fnmatch
 import pytz
 import re
 
@@ -26,6 +27,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
                     name
                     createdAt
                     updatedAt
+                    heartbeatAt
                     state
                     tags
                     host
@@ -66,7 +68,8 @@ class Tree:
     team: str
     start_date: dt.date
     end_date: dt.date
-    ignore_projects: list[str]
+    distributed_learning: bool
+    ignore_project_pattern: str = None
     projects: list[Project] = None
 
 
@@ -77,11 +80,12 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
     print("Get projects for each team ...")
     for tree in trees:
         if (target_date >= tree.start_date) & (target_date < tree.end_date):
-            projects = [
-                Project(project=p.name)
-                for p in wandb.Api().projects(tree.team)
-                if p.name not in tree.ignore_projects
-            ]
+            projects = []
+            for p in wandb.Api().projects(tree.team):
+                if tree.ignore_project_pattern is not None:
+                    if fnmatch(p.name, tree.ignore_project_pattern):
+                        continue
+                projects.append(Project(project=p.name))
         else:
             print(f"{tree.team}: Not started yet or already ended.")
             projects = []
@@ -95,6 +99,7 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
                 team=tree.team,
                 project=project.project,
                 target_date=target_date,
+                distributed_learning=tree.distributed_learning,
             )
             project.runs = runs
 
@@ -168,14 +173,19 @@ def plant_trees() -> list[Tree]:
                 team=team,
                 start_date=get_start_date(company_schedule=comp.schedule),
                 end_date=get_end_date(company_schedule=comp.schedule),
-                ignore_projects=comp.get("ignore_projects", ""),
+                ignore_project_pattern=comp.get("ignore_project_pattern", None),
+                distributed_learning=comp.get("distributed_learning", False),
             )
             trees.append(tree)
     return trees
 
 
 def query_runs(
-    team: str, project: str, target_date: dt.date, make_blacklist=False
+    team: str,
+    project: str,
+    target_date: dt.date,
+    distributed_learning: bool,
+    make_blacklist: bool = False,
 ) -> list[Run]:
     if CONFIG.testmode:
         if team != "stockmark-geniac":
@@ -203,7 +213,7 @@ def query_runs(
         createdAt = dt.datetime.fromisoformat(node.createdAt) + dt.timedelta(
             hours=JAPAN_UTC_OFFSET
         )
-        updatedAt = dt.datetime.fromisoformat(node.updatedAt) + dt.timedelta(
+        updatedAt = dt.datetime.fromisoformat(node.heartbeatAt) + dt.timedelta(
             hours=JAPAN_UTC_OFFSET
         )
 
@@ -227,12 +237,12 @@ def query_runs(
 
         run_path = ("/").join((team, project, node.name))
 
-        # 分散学習のGPU数を取得
-        true_gpu_count = get_true_gpu_count(run_path=run_path)
-        if true_gpu_count is None:
-            gpu_count = node.runInfo.gpuCount
+        # 分散学習の場合はworld_sizeをgpu countとして扱う
+        world_size = get_world_size(run_path=run_path)
+        if distributed_learning and world_size > 0:
+            gpu_count = world_size
         else:
-            gpu_count = true_gpu_count
+            gpu_count = node.runInfo.gpuCount
 
         # データ追加
         run = Run(
@@ -449,12 +459,10 @@ def get_new_run_df(
     )
     return new_run_df
 
-def get_true_gpu_count(run_path: str) -> int:
+
+def get_world_size(run_path: str) -> int:
     api = wandb.Api()
     run = api.run(run_path)
     config = run.config
-    gpu_count = config.get("world_size")
-    if gpu_count is None:
-        return None
-    else:
-        return gpu_count
+    world_size = config.get("world_size", 0)
+    return world_size

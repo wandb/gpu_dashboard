@@ -1,6 +1,6 @@
 testmode: false
 enable_alert: true
-ignore_tag: other_gpu
+ignore_tag: other_gpu  # 増えるようだったらfnmatchで対応する
 wandb_dir: /tmp
 
 dashboard:
@@ -48,8 +48,7 @@ companies:
         assigned_gpu_node: 48
       - date: "2024-04-15" # end of GPU provision
         assigned_gpu_node: 0
-    ignore_projects:
-      - 100b
+    ignore_project_pattern: "100b"
 
   ### Turing ###
   - company: turing-geniac 
@@ -68,6 +67,8 @@ companies:
     schedule:
       - date: "2024-04-15"
         assigned_gpu_node: 75
+    distributed_learning: true
+    ignore_project_pattern: "*-dummy"
 
   ### Matsuo LB ###
   - company: weblab-geniac 
