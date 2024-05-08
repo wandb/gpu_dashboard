@@ -87,13 +87,13 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
                         continue
                 projects.append(Project(project=p.name))
         else:
-            print(f"{tree.team}: Not started yet or already ended.")
+            print(f"  {tree.team}: Not started yet or already ended.")
             projects = []
         tree.projects = projects
 
     print("Get runs for each project ...")
     for tree in tqdm(trees):
-        print("Team:", tree.team)
+        print("  Team:", tree.team)
         for project in tqdm(tree.projects):
             runs = query_runs(
                 team=tree.team,
@@ -104,19 +104,20 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
             project.runs = runs
 
     print("Checking overlap of runs in each team ...")
-    alert_texts = []
+    companies = []
     for tree in tqdm(trees):
-        print("Team:", tree.team)
+        print("  Team:", tree.team)
         team_runs = []
         for project in tqdm(tree.projects):
             for run in project.runs:
                 team_runs.append(run)
-        alert_texts += find_overlap_runs(runs=team_runs)
-    alert_overlap_runs(alert_texts=alert_texts)
+        companies += find_overlap_runs(runs=team_runs)
+    alert_text = "\n".join(companies)
+    alert_overlap_runs(alert_text=alert_text)
 
     print("Get metrics for each run ...")
     for tree in tqdm(trees):
-        print("Team:", tree.team)
+        print("  Team:", tree.team)
         for project in tqdm(tree.projects):
             for run in project.runs:
                 metrics_df = get_metrics(
@@ -130,7 +131,7 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
     # concat run df
     df_list = []
     for tree in tqdm(trees):
-        print("Team:", tree.team)
+        print("  Team:", tree.team)
         for project in tree.projects:
             for run in project.runs:
                 new_run_df = get_new_run_df(
@@ -235,7 +236,7 @@ def query_runs(
             if target_date < createdAt.date():  # 未来のものはスキップ
                 continue
 
-        run_path = ("/").join((team, project, node.name))
+        run_path = "/".join((team, project, node.name))
 
         # 分散学習の場合はworld_sizeをgpu countとして扱う
         world_size = get_world_size(run_path=run_path)
@@ -260,9 +261,9 @@ def query_runs(
     return runs
 
 
-def find_overlap_runs(runs: list[Run]) -> list[str]:
-    """team内で同じhostが同時にrunを作っているものを"""
-    alert_texts = []
+def find_overlap_runs(runs: list[Run]) -> set[str]:
+    """team内で同じhostが同時にrunを作っているものを検出する"""
+    companies = set()
     for i in range(len(runs)):
         for j in range(i + 1, len(runs)):
             if (
@@ -270,15 +271,20 @@ def find_overlap_runs(runs: list[Run]) -> list[str]:
                 and runs[i].created_at < runs[j].updated_at
                 and runs[j].created_at < runs[i].updated_at
             ):
-                alert_text = "Overlap of runs found. Please check runs below.\n  {run1}\n  {run2}".format(
-                    run1=runs[i].__dict__, run2=runs[j].__dict__
+                log_text = "\n".join(
+                    (
+                        "Overlap of runs found. Please check runs below.",
+                        str(runs[i].__dict__),
+                        str(runs[j].__dict__),
+                    )
                 )
-                print(alert_text)
-                alert_texts.append(alert_text)
-    return alert_texts
+                print(log_text)
+                company = runs[i].run_path.split("/")[0]
+                companies.add(company)
+    return companies
 
 
-def alert_overlap_runs(alert_texts: list[str]) -> None:
+def alert_overlap_runs(alert_text: str) -> None:
     if not CONFIG.enable_alert:
         return None
     with wandb.init(
@@ -286,10 +292,8 @@ def alert_overlap_runs(alert_texts: list[str]) -> None:
         project=CONFIG.dashboard.project,
         name=f"Overlap Alert",
     ) as run:
-        if alert_texts:
-            for alert_text in alert_texts:
-                print(alert_text)
-                wandb.alert(title="Overlap of runs found", text=alert_text)
+        if alert_text:
+            wandb.alert(title="Overlap of runs found", text=alert_text)
         else:
             print("No overlaps found.")
     return None
@@ -302,7 +306,7 @@ def get_metrics(
     target_date: dt.date,
 ) -> pl.DataFrame:
     # raw data
-    run_path = ("/").join((team, project, run_id))
+    run_path = "/".join((team, project, run_id))
     api = wandb.Api()
     run = api.run(path=run_path)
     metrics_df = pl.from_dataframe(run.history(stream="events", samples=100))
