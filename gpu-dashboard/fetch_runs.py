@@ -3,6 +3,7 @@ import datetime as dt
 from fnmatch import fnmatch
 import pytz
 import re
+from typing import Union
 
 from easydict import EasyDict
 import polars as pl
@@ -45,7 +46,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
 
 @dataclass
 class Run:
-    run_id: str
+    run_id: str  # TODO methodに移動する
     run_path: str
     created_at: dt.datetime
     updated_at: dt.datetime
@@ -55,6 +56,10 @@ class Run:
     gpu_name: str
     gpu_count: int
     metrics_df: pl.DataFrame = None
+
+    def get_company(self) -> str:
+        company, project, run_id = self.run_path.split("/")
+        return company
 
 
 @dataclass
@@ -104,16 +109,15 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
             project.runs = runs
 
     print("Checking overlap of runs in each team ...")
-    companies = []
+    overlap_run_pairs = []
     for tree in tqdm(trees):
         print("  Team:", tree.team)
         team_runs = []
         for project in tqdm(tree.projects):
             for run in project.runs:
                 team_runs.append(run)
-        companies += find_overlap_runs(runs=team_runs)
-    alert_text = "\n".join(companies)
-    alert_overlap_runs(alert_text=alert_text)
+        overlap_run_pairs += find_overlap_run_pairs(runs=team_runs)
+    alert_overlap_runs(overlap_run_pairs=overlap_run_pairs)
 
     print("Get metrics for each run ...")
     for tree in tqdm(trees):
@@ -125,7 +129,7 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
                     project=project.project,
                     run_id=run.run_id,
                     target_date=target_date,
-                )
+                )  # TODO run_pathを使う
                 run.metrics_df = metrics_df
 
     # concat run df
@@ -135,8 +139,8 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
         for project in tree.projects:
             for run in project.runs:
                 new_run_df = get_new_run_df(
-                    team=tree.team,
-                    project=project.project,
+                    team=tree.team,  # TODO この行を削除する
+                    project=project.project,  # TODO この行を削除する
                     run=run,
                     target_date=target_date,
                 )
@@ -247,7 +251,7 @@ def query_runs(
 
         # データ追加
         run = Run(
-            run_id=node.name,
+            run_id=node.name,  # TODO この行を削除する
             run_path=run_path,
             updated_at=updatedAt,
             created_at=createdAt,
@@ -261,9 +265,9 @@ def query_runs(
     return runs
 
 
-def find_overlap_runs(runs: list[Run]) -> set[str]:
+def find_overlap_run_pairs(runs: list[Run]) -> list[tuple[Run]]:
     """team内で同じhostが同時にrunを作っているものを検出する"""
-    companies = set()
+    overlap_run_pairs = []
     for i in range(len(runs)):
         for j in range(i + 1, len(runs)):
             if (
@@ -271,20 +275,11 @@ def find_overlap_runs(runs: list[Run]) -> set[str]:
                 and runs[i].created_at < runs[j].updated_at
                 and runs[j].created_at < runs[i].updated_at
             ):
-                log_text = "\n".join(
-                    (
-                        "Overlap of runs found. Please check runs below.",
-                        str(runs[i].__dict__),
-                        str(runs[j].__dict__),
-                    )
-                )
-                print(log_text)
-                company = runs[i].run_path.split("/")[0]
-                companies.add(company)
-    return companies
+                overlap_run_pairs.append((runs[i], runs[j]))
+    return overlap_run_pairs
 
 
-def alert_overlap_runs(alert_text: str) -> None:
+def alert_overlap_runs(overlap_run_pairs: list[tuple[Run]]) -> None:
     if not CONFIG.enable_alert:
         return None
     with wandb.init(
@@ -292,8 +287,10 @@ def alert_overlap_runs(alert_text: str) -> None:
         project=CONFIG.dashboard.project,
         name=f"Overlap Alert",
     ) as run:
-        if alert_text:
-            wandb.alert(title="Overlap of runs found", text=alert_text)
+        if overlap_run_pairs:
+            _ = [print(f"{c[0].__dict__}, {c[1].__dict__}") for c in overlap_run_pairs]
+            companies = sorted(set(c[0].get_company() for c in overlap_run_pairs))
+            wandb.alert(title="Overlap of runs found", text="\n".join(companies))
         else:
             print("No overlaps found.")
     return None
