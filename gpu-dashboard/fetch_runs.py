@@ -46,7 +46,6 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
 
 @dataclass
 class Run:
-    run_id: str  # TODO methodに移動する
     run_path: str
     created_at: dt.datetime
     updated_at: dt.datetime
@@ -57,9 +56,17 @@ class Run:
     gpu_count: int
     metrics_df: pl.DataFrame = None
 
-    def get_company(self) -> str:
-        company, project, run_id = self.run_path.split("/")
-        return company
+    def get_team(self) -> str:
+        team = self.run_path.split("/")[0]
+        return team
+
+    def get_project(self) -> str:
+        project = self.run_path.split("/")[1]
+        return project
+
+    def get_run_id(self) -> str:
+        run_id = self.run_path.split("/")[2]
+        return run_id
 
 
 @dataclass
@@ -84,8 +91,8 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
 
     print("Get projects for each team ...")
     for tree in trees:
+        projects = []
         if (target_date >= tree.start_date) & (target_date < tree.end_date):
-            projects = []
             for p in wandb.Api().projects(tree.team):
                 if tree.ignore_project_pattern is not None:
                     if fnmatch(p.name, tree.ignore_project_pattern):
@@ -93,7 +100,6 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
                 projects.append(Project(project=p.name))
         else:
             print(f"  {tree.team}: Not started yet or already ended.")
-            projects = []
         tree.projects = projects
 
     print("Get runs for each project ...")
@@ -125,11 +131,9 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
         for project in tqdm(tree.projects):
             for run in project.runs:
                 metrics_df = get_metrics(
-                    team=tree.team,
-                    project=project.project,
-                    run_id=run.run_id,
+                    run_path=run.run_path,
                     target_date=target_date,
-                )  # TODO run_pathを使う
+                )
                 run.metrics_df = metrics_df
 
     # concat run df
@@ -139,8 +143,6 @@ def fetch_runs(target_date: dt.datetime) -> pl.DataFrame:
         for project in tree.projects:
             for run in project.runs:
                 new_run_df = get_new_run_df(
-                    team=tree.team,  # TODO この行を削除する
-                    project=project.project,  # TODO この行を削除する
                     run=run,
                     target_date=target_date,
                 )
@@ -251,7 +253,6 @@ def query_runs(
 
         # データ追加
         run = Run(
-            run_id=node.name,  # TODO この行を削除する
             run_path=run_path,
             updated_at=updatedAt,
             created_at=createdAt,
@@ -289,21 +290,18 @@ def alert_overlap_runs(overlap_run_pairs: list[tuple[Run]]) -> None:
     ) as run:
         if overlap_run_pairs:
             _ = [print(f"{c[0].__dict__}, {c[1].__dict__}") for c in overlap_run_pairs]
-            companies = sorted(set(c[0].get_company() for c in overlap_run_pairs))
-            wandb.alert(title="Overlap of runs found", text="\n".join(companies))
+            teams = sorted(set(c[0].get_team() for c in overlap_run_pairs))
+            wandb.alert(title="Overlap of runs found", text="\n".join(teams))
         else:
             print("No overlaps found.")
     return None
 
 
 def get_metrics(
-    team: str,
-    project: str,
-    run_id: str,
+    run_path: str,
     target_date: dt.date,
 ) -> pl.DataFrame:
     # raw data
-    run_path = "/".join((team, project, run_id))
     api = wandb.Api()
     run = api.run(path=run_path)
     metrics_df = pl.from_dataframe(run.history(stream="events", samples=100))
@@ -375,9 +373,7 @@ def get_metrics(
     return daily_metrics_df
 
 
-def get_new_run_df(
-    team: str, project: str, run: Run, target_date: dt.date
-) -> pl.DataFrame:
+def get_new_run_df(run: Run, target_date: dt.date) -> pl.DataFrame:
     def divide_duration_daily(
         start: dt.datetime,
         end: dt.datetime,
@@ -430,9 +426,9 @@ def get_new_run_df(
     else:
         new_run_df = duration_df.join(run.metrics_df, on=["date"], how="left")
     new_run_df = new_run_df.with_columns(
-        pl.lit(team).cast(pl.String).alias("company_name"),
-        pl.lit(project).cast(pl.String).alias("project"),
-        pl.lit(run.run_id).cast(pl.String).alias("run_id"),
+        pl.lit(run.get_team()).cast(pl.String).alias("company_name"),
+        pl.lit(run.get_project()).cast(pl.String).alias("project"),
+        pl.lit(run.get_run_id()).cast(pl.String).alias("run_id"),
         pl.lit(0).cast(pl.Int64).alias("assigned_gpu_node"),  # not in use
         pl.lit(run.created_at).cast(pl.Datetime).alias("created_at"),
         pl.lit(run.updated_at).cast(pl.Datetime).alias("updated_at"),
