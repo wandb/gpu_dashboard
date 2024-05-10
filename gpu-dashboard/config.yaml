@@ -1,5 +1,5 @@
 testmode: false
-enable_alert: false
+enable_alert: true
 ignore_tag: other_gpu  # 増えるようだったらfnmatchで対応する
 wandb_dir: /tmp
 

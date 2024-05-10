@@ -66,10 +66,17 @@ class Run:
     def get_run_id(self) -> str:
         run_id = self.run_path.split("/")[2]
         return run_id
-    
+
     def to_log_dict(self):
-        ignore_keys = ["metrics_df"]
-        return {k: v for k, v in asdict(self).items() if k not in ignore_keys}
+        url = "https://wandb.ai/{entity}/{project}/runs/{run_id}/overview".format(
+            entity=self.get_team(),
+            project=self.get_project(),
+            run_id=self.get_run_id(),
+        )
+        ignore_keys = ["run_path", "metrics_df"]
+        log_dict = {k: v for k, v in asdict(self).items() if k not in ignore_keys}
+        return {"url": url, **log_dict}
+
 
 @dataclass
 class Project:
