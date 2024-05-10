@@ -304,7 +304,7 @@ def alert_overlap_runs(overlap_run_pairs: list[tuple[Run]]) -> None:
             teams = sorted(set(c[0].get_team() for c in overlap_run_pairs))
             wandb.alert(title="Overlap of runs found", text="\n".join(teams))
         else:
-            print("No overlaps found.")
+            wandb.alert(title="No overlaps found", text="")
     return None
 
 
