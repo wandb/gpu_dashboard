@@ -1,9 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import datetime as dt
 from fnmatch import fnmatch
 import pytz
 import re
-from typing import Union
 
 from easydict import EasyDict
 import polars as pl
@@ -67,7 +66,10 @@ class Run:
     def get_run_id(self) -> str:
         run_id = self.run_path.split("/")[2]
         return run_id
-
+    
+    def to_log_dict(self):
+        ignore_keys = ["metrics_df"]
+        return {k: v for k, v in asdict(self).items() if k not in ignore_keys}
 
 @dataclass
 class Project:
@@ -289,7 +291,9 @@ def alert_overlap_runs(overlap_run_pairs: list[tuple[Run]]) -> None:
         name=f"Overlap Alert",
     ) as run:
         if overlap_run_pairs:
-            _ = [print(f"{c[0].__dict__}, {c[1].__dict__}") for c in overlap_run_pairs]
+            for run_pair in overlap_run_pairs:
+                run_pair_str = ", ".join(f"{run.to_log_dict()}" for run in run_pair)
+                print(run_pair_str)
             teams = sorted(set(c[0].get_team() for c in overlap_run_pairs))
             wandb.alert(title="Overlap of runs found", text="\n".join(teams))
         else:
