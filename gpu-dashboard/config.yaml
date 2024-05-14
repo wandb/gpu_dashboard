@@ -1,0 +1,94 @@
+testmode: false
+enable_alert: true
+ignore_tag: other_gpu  # 増えるようだったらfnmatchで対応する
+wandb_dir: /tmp
+
+dashboard:
+  entity: geniac-gpu
+  project: test-gpu-dashboard
+  # project: gpu-dashboard-dev  # for development
+  tag_for_latest: latest
+
+dataset:
+  entity: geniac-gpu
+  project: test-gpu-dashboard
+  artifact_name: version_20240227
+
+blacklist:
+  entity: geniac-gpu
+  project: test-gpu-dashboard
+  artifact_name: blacklist
+
+companies:
+
+  ### ABEJA ###
+  - company: abeja-geniac 
+    teams:
+      - abeja-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 48
+      - date: "2024-04-15" # end of GPU provision
+        assigned_gpu_node: 0
+
+  ### PFE ###
+  - company: pfe-geniac 
+    teams:
+      - pfe-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 50
+
+  ### Stockmark ###
+  - company: stockmark-geniac 
+    teams:
+      - stockmark-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 48
+      - date: "2024-04-15" # end of GPU provision
+        assigned_gpu_node: 0
+    ignore_project_pattern: "100b"
+
+  ### Turing ###
+  - company: turing-geniac 
+    teams:
+      - turing-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 4
+      - date: "2024-06-15"
+        assigned_gpu_node: 35
+
+  ### NII ###
+  - company: nii-geniac 
+    teams:
+      - nii-geniac
+    schedule:
+      - date: "2024-04-15"
+        assigned_gpu_node: 75
+    distributed_learning: true
+    ignore_project_pattern: "*-dummy"
+
+  ### Matsuo LB ###
+  - company: weblab-geniac 
+    teams:
+      - weblab-geniac1
+      - weblab-geniac2
+      - weblab-geniac3
+      - weblab-geniac4
+      - weblab-geniac5
+      - weblab-geniac6
+      - weblab-geniac7
+      - weblab-geniac8
+    schedule:
+      - date: "2024-04-15"
+        assigned_gpu_node: 21
+
+  ### Sakana AI ###
+  - company: sakanaai-geniac 
+    teams:
+      - sakanaai-geniac
+    schedule:
+      - date: "2024-06-15"
+        assigned_gpu_node: 32
