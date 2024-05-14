@@ -86,3 +86,27 @@ companies:
     schedule:
       - date: "2024-06-15"
         assigned_gpu_node: 32
+
+  ### ELYZA ###
+  - company: elyza-geniac
+    teams:
+      - elyza-geniac
+    schedule:
+      - date: "2024-05-24"
+        assigned_gpu_node: 36
+
+  ### Kotoba Technologies ###
+  - company: kotoba-geniac
+    teams:
+      - kotoba-geniac
+    schedule:
+      - date: "2024-05-24"
+        assigned_gpu_node: 8
+
+  ### 富士通 ###
+  - company: fujitsu-geniac
+    teams:
+      - fujitsu-geniac
+    schedule:
+      - date: "2024-05-24"
+        assigned_gpu_node: 16
