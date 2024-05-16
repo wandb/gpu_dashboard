@@ -78,3 +78,6 @@ def upload_blacklist(blacklist: list[BlacklistRow]) -> None:
         run.log_artifact(artifact)
 
     return None
+
+if __name__ == "__main__":
+    update_blacklist()
