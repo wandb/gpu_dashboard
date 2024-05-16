@@ -37,6 +37,7 @@ def create_blacklist() -> list[BlacklistRow]:
                 project=project.project,
                 target_date=None,
                 make_blacklist=True,
+                distributed_learning=tree.distributed_learning,
             )
             project.runs = runs
 

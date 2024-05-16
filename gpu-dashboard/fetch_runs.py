@@ -245,6 +245,11 @@ def query_runs(
                 t.lower() for t in node.tags
             ]:  # 特定のtagをスキップ
                 continue
+        else:
+            if CONFIG.ignore_tag not in [
+                t.lower() for t in node.tags
+            ]:  # 特定のtag以外をスキップ
+                continue
         if target_date is not None:
             if target_date > updatedAt.date():  # 昨日以前に終了したものはスキップ
                 continue
