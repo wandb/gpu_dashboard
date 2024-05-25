@@ -339,17 +339,23 @@ def get_metrics(
     )
     if metrics_df_with_datetime.is_empty():
         return pl.DataFrame()
-    # process
-    daily_metrics_df = (
-        metrics_df_with_datetime.lazy()
-        # 縦持ちに変換
+    metrics_df_small_width = (
+        metrics_df_with_datetime
+        # カラム抽出
         .select(
             "datetime",
             "_timestamp",
             gpu_ptn := ("^system\.gpu\.\d+\.gpu$"),
             memory_ptn := ("^system\.gpu\.\d+\.memory$"),
         )
+    )
+    if metrics_df_small_width.width == 2:
+        return pl.DataFrame()
+    # process
+    daily_metrics_df = (
+        metrics_df_small_width
         .with_columns(pl.col("datetime").cast(pl.Date).alias("date"))
+        # 縦持ちに変換
         .melt(
             id_vars=["date", "datetime", "_timestamp"],
             value_vars=[c for c in metrics_df.columns if re.findall(gpu_ptn, c)]
@@ -369,7 +375,6 @@ def get_metrics(
             )  # seconds * 60 * 60 = hours
             .alias("metrics_hours"),
         )
-        .collect()
         # 横持ちに変換
         .pivot(index="date", columns="gpu", values=["average", "max"])
         .rename(
