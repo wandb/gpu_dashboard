@@ -108,6 +108,7 @@ companies:
     schedule:
       - date: "2024-05-24"
         assigned_gpu_node: 8
+    distributed_learning: true
 
   ### 富士通 ###
   - company: fujitsu-geniac
