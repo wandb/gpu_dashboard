@@ -482,5 +482,13 @@ def get_world_size(run_path: str) -> int:
     api = wandb.Api()
     run = api.run(run_path)
     config = run.config
-    world_size = config.get("world_size", 0)
+    entity = run_path.split("/")[0]
+    num_nodes = config.get("num_nodes", 0)
+    num_gpus = config.get("num_gpus", 0)
+
+    if entity == "kotoba-geniac":
+        world_size = num_nodes * num_gpus
+    else:
+        world_size = config.get("world_size", 0)
+
     return world_size
