@@ -38,7 +38,7 @@ def error_handler(func: callable) -> callable:
 
     return wrapper
 
-
+@error_handler
 def handler(event: dict[str, str], context: object) -> None:
     # -------------------- 準備 -------------------- #
     # Set WANDB envirionment
