@@ -59,6 +59,7 @@ companies:
         assigned_gpu_node: 4
       - date: "2024-06-15"
         assigned_gpu_node: 35
+    distributed_learning: true
 
   ### NII ###
   - company: nii-geniac 

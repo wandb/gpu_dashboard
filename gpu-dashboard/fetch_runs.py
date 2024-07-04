@@ -319,7 +319,11 @@ def get_metrics(
 ) -> pl.DataFrame:
     # raw data
     api = wandb.Api()
-    run = api.run(path=run_path)
+    try:
+        run = api.run(path=run_path)
+    except wandb.errors.CommError as e:
+        print(f"Error: Could not find run {run_path}. Exception: {e}")
+        return pl.DataFrame()
     metrics_df = pl.from_dataframe(run.history(stream="events", samples=100))
     # filter
     if len(metrics_df) <= 1:
