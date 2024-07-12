@@ -492,6 +492,8 @@ def get_world_size(run_path: str) -> int:
 
     if entity == "kotoba-geniac":
         world_size = num_nodes * num_gpus
+    elif entity == "fujitsu-geniac":
+        world_size = config.get("SLURM_NTASKS", 0)
     else:
         world_size = config.get("world_size", 0)
 
