@@ -46,7 +46,7 @@ def create_blacklist() -> list[BlacklistRow]:
     for tree in trees:
         for project in tree.projects:
             for run in project.runs:
-                if CONFIG.ignore_tag in [t.lower() for t in run.tags]:
+                if not set(CONFIG.ignore_tag).isdisjoint([t.lower() for t in run.tags]):
                     blacklist.append(BlacklistRow(run_path=run.run_path, tags=run.tags))
 
     return blacklist

@@ -241,14 +241,14 @@ def query_runs(
         if createdAt.timestamp() == updatedAt.timestamp():  # 即終了したもの
             continue
         if not make_blacklist:
-            if CONFIG.ignore_tag in [
+            if not set(CONFIG.ignore_tag).isdisjoint([
                 t.lower() for t in node.tags
-            ]:  # 特定のtagをスキップ
+            ]): # 特定のtagをスキップ
                 continue
         else:
-            if CONFIG.ignore_tag not in [
+            if set(CONFIG.ignore_tag).isdisjoint([
                 t.lower() for t in node.tags
-            ]:  # 特定のtag以外をスキップ
+            ]): # 特定のtag以外をスキップ
                 continue
         if target_date is not None:
             if target_date > updatedAt.date():  # 昨日以前に終了したものはスキップ

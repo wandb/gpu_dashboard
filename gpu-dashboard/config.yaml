@@ -1,6 +1,6 @@
 testmode: false
 enable_alert: true
-ignore_tag: other_gpu  # 増えるようだったらfnmatchで対応する
+ignore_tag: ["other_gpu", "others_gpu"]  # 増えるようだったらfnmatchで対応する
 wandb_dir: /tmp
 
 dashboard:
