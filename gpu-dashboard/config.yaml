@@ -38,6 +38,8 @@ companies:
     schedule:
       - date: "2024-02-15"
         assigned_gpu_node: 50
+      - date: "2024-07-16"
+        assigned_gpu_node: 52
 
   ### Stockmark ###
   - company: stockmark-geniac 
