@@ -37,6 +37,7 @@ def create_blacklist() -> list[BlacklistRow]:
                 project=project.project,
                 target_date=None,
                 make_blacklist=True,
+                distributed_learning=tree.distributed_learning,
             )
             project.runs = runs
 
@@ -45,7 +46,7 @@ def create_blacklist() -> list[BlacklistRow]:
     for tree in trees:
         for project in tree.projects:
             for run in project.runs:
-                if CONFIG.ignore_tag in [t.lower() for t in run.tags]:
+                if not set(CONFIG.ignore_tag).isdisjoint([t.lower() for t in run.tags]):
                     blacklist.append(BlacklistRow(run_path=run.run_path, tags=run.tags))
 
     return blacklist
@@ -78,3 +79,6 @@ def upload_blacklist(blacklist: list[BlacklistRow]) -> None:
         run.log_artifact(artifact)
 
     return None
+
+if __name__ == "__main__":
+    update_blacklist()

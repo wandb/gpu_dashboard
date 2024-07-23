@@ -282,12 +282,15 @@ def update_companies(
                     ),
                 }
             )
-            if CONFIG.enable_alert & (
-                gpu_daily_company_table["GPU稼働率(%)"].to_list()[0] < 10
-            ):
+            if CONFIG.enable_alert:
                 latest_row_dict = gpu_daily_company_table.to_pandas().to_dict(
                     orient="records"
                 )[0]
-                wandb.alert(title="Too low utilization rate found.", text=str(latest_row_dict))
+                threshold = 10
+                if latest_row_dict["GPU稼働率(%)"] < threshold:
+                    wandb.alert(
+                        title="Too low utilization rate found.",
+                        text=company,
+                    )
 
     return None

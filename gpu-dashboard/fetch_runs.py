@@ -241,9 +241,14 @@ def query_runs(
         if createdAt.timestamp() == updatedAt.timestamp():  # 即終了したもの
             continue
         if not make_blacklist:
-            if CONFIG.ignore_tag in [
+            if not set(CONFIG.ignore_tag).isdisjoint([
                 t.lower() for t in node.tags
-            ]:  # 特定のtagをスキップ
+            ]): # 特定のtagをスキップ
+                continue
+        else:
+            if set(CONFIG.ignore_tag).isdisjoint([
+                t.lower() for t in node.tags
+            ]): # 特定のtag以外をスキップ
                 continue
         if target_date is not None:
             if target_date > updatedAt.date():  # 昨日以前に終了したものはスキップ
@@ -314,7 +319,11 @@ def get_metrics(
 ) -> pl.DataFrame:
     # raw data
     api = wandb.Api()
-    run = api.run(path=run_path)
+    try:
+        run = api.run(path=run_path)
+    except wandb.errors.CommError as e:
+        print(f"Error: Could not find run {run_path}. Exception: {e}")
+        return pl.DataFrame()
     metrics_df = pl.from_dataframe(run.history(stream="events", samples=100))
     # filter
     if len(metrics_df) <= 1:
@@ -334,17 +343,23 @@ def get_metrics(
     )
     if metrics_df_with_datetime.is_empty():
         return pl.DataFrame()
-    # process
-    daily_metrics_df = (
-        metrics_df_with_datetime.lazy()
-        # 縦持ちに変換
+    metrics_df_small_width = (
+        metrics_df_with_datetime
+        # カラム抽出
         .select(
             "datetime",
             "_timestamp",
             gpu_ptn := ("^system\.gpu\.\d+\.gpu$"),
             memory_ptn := ("^system\.gpu\.\d+\.memory$"),
         )
+    )
+    if metrics_df_small_width.width == 2:
+        return pl.DataFrame()
+    # process
+    daily_metrics_df = (
+        metrics_df_small_width
         .with_columns(pl.col("datetime").cast(pl.Date).alias("date"))
+        # 縦持ちに変換
         .melt(
             id_vars=["date", "datetime", "_timestamp"],
             value_vars=[c for c in metrics_df.columns if re.findall(gpu_ptn, c)]
@@ -364,7 +379,6 @@ def get_metrics(
             )  # seconds * 60 * 60 = hours
             .alias("metrics_hours"),
         )
-        .collect()
         # 横持ちに変換
         .pivot(index="date", columns="gpu", values=["average", "max"])
         .rename(
@@ -472,5 +486,15 @@ def get_world_size(run_path: str) -> int:
     api = wandb.Api()
     run = api.run(run_path)
     config = run.config
-    world_size = config.get("world_size", 0)
+    entity = run_path.split("/")[0]
+    num_nodes = config.get("num_nodes", 0)
+    num_gpus = config.get("num_gpus", 0)
+
+    if entity == "kotoba-geniac":
+        world_size = num_nodes * num_gpus
+    elif entity == "fujitsu-geniac":
+        world_size = config.get("SLURM_NTASKS", 0)
+    else:
+        world_size = config.get("world_size", 0)
+
     return world_size
