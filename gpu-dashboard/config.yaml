@@ -63,7 +63,7 @@ companies:
         assigned_gpu_node: 35
     distributed_learning: true
 
-  ### NII ###
+  # ### NII ###
   - company: nii-geniac 
     teams:
       - nii-geniac
@@ -73,7 +73,7 @@ companies:
     distributed_learning: true
     ignore_project_pattern: "*-dummy"
 
-  ### Matsuo LB ###
+  # ### Matsuo LB ###
   - company: weblab-geniac 
     teams:
       - weblab-geniac1
@@ -88,15 +88,16 @@ companies:
       - date: "2024-04-15"
         assigned_gpu_node: 21
 
-  ### Sakana AI ###
+  # ### Sakana AI ###
   - company: sakanaai-geniac 
     teams:
       - sakanaai-geniac
     schedule:
       - date: "2024-06-15"
         assigned_gpu_node: 32
+    distributed_learning: true
 
-  ### ELYZA ###
+  # ### ELYZA ###
   - company: elyza-geniac
     teams:
       - elyza-geniac
@@ -105,7 +106,7 @@ companies:
         assigned_gpu_node: 36
     distributed_learning: true
 
-  ### Kotoba Technologies ###
+  # ### Kotoba Technologies ###
   - company: kotoba-geniac
     teams:
       - kotoba-geniac
@@ -114,7 +115,7 @@ companies:
         assigned_gpu_node: 8
     distributed_learning: true
 
-  ### 富士通 ###
+  # ### 富士通 ###
   - company: fujitsu-geniac
     teams:
       - fujitsu-geniac

@@ -260,7 +260,11 @@ def query_runs(
 
         # 分散学習の場合はworld_sizeをgpu countとして扱う
         world_size = get_world_size(run_path=run_path)
-        if distributed_learning and world_size > 0:
+        if team == "turing-geniac" and dt.date(2024,6,14) < createdAt.date() < dt.date(2024,7,4):
+            gpu_count = 96
+        elif team == "sakanaai-geniac" and project in ["agent-instruct","wdistill","distillation-takiba"]:
+            gpu_count = 0
+        elif distributed_learning and world_size > 0:
             gpu_count = world_size
         else:
             gpu_count = node.runInfo.gpuCount
@@ -487,6 +491,7 @@ def get_world_size(run_path: str) -> int:
     run = api.run(run_path)
     config = run.config
     entity = run_path.split("/")[0]
+    project = run_path.split("/")[1]
     num_nodes = config.get("num_nodes", 0)
     num_gpus = config.get("num_gpus", 0)
 
@@ -497,7 +502,27 @@ def get_world_size(run_path: str) -> int:
             world_size = config.get("SLURM_NTASKS", 0)
         else:
             world_size = 1
+    elif entity == "turing-geniac":
+        if project == "vad-e2e-tuscenes":
+            world_size = 16
+        elif project == "Llama-3-Swallow-8B-v0.1-instruction-tuning":
+            world_size = 64
+        else:
+            world_size = config.get("world_size", 0)
+    elif entity == "sakanaai-geniac":
+        if project in ["trash-memory-evolution","candidate_eval_memory_evolution_hf","eval_memory_evolution_hf_sc","eval_memory_evolution_hf","memory_evolution_hf_failed","memory_evolution_hf","scratch"]:
+            world_size = 16
+        elif project == "gcp-agent-instruct":
+            world_size =  config.get("world_size", 0)
+        elif project in ["trash-quality-diversity"," quality-diversity"]:
+            world_size =  config.get("gpu_num", 0)
+        elif project == "distillation":
+            world_size = 80
+        else:
+            world_size = config.get("world_size", 0)
     else:
         world_size = config.get("world_size", 0)
 
     return world_size
+
+
