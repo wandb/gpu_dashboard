@@ -1,0 +1,4 @@
+__pycache__
+.venv
+wandb
+download_tables.ipynb

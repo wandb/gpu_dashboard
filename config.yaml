@@ -1,0 +1,125 @@
+testmode: false
+enable_alert: false
+ignore_tags: ["other_gpu", "others_gpu"]  # 増えるようだったらfnmatchで対応する
+wandb_dir: /tmp/wandb
+max_workers: 1
+
+dashboard:
+  entity: geniac-gpu
+  project: gpu-dashboard2
+  # project: gpu-dashboard2-dev  # for development
+  tag_for_latest: latest
+
+dataset:
+  entity: geniac-gpu
+  project: gpu-dashboard2-dev
+  artifact_name: version_20241003
+
+blacklist:
+  entity: geniac-gpu
+  project: gpu-dashboard2-dev
+  artifact_name: blacklist
+
+companies:
+
+  ### ABEJA ###
+  - company: abeja-geniac 
+    teams:
+      - abeja-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 48
+      - date: "2024-04-15" # end of GPU provision
+        assigned_gpu_node: 0
+
+  ### PFE ###
+  - company: pfe-geniac 
+    teams:
+      - pfe-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 50
+      - date: "2024-07-16"
+        assigned_gpu_node: 52
+
+  ### Stockmark ###
+  - company: stockmark-geniac 
+    teams:
+      - stockmark-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 48
+      - date: "2024-04-15" # end of GPU provision
+        assigned_gpu_node: 0
+    ignore_project_pattern: "100b"
+
+  ### Turing ###
+  - company: turing-geniac 
+    teams:
+      - turing-geniac
+    schedule:
+      - date: "2024-02-15"
+        assigned_gpu_node: 4
+      - date: "2024-06-15"
+        assigned_gpu_node: 35
+    distributed_learning: true
+
+  ### NII ###
+  - company: nii-geniac 
+    teams:
+      - nii-geniac
+    schedule:
+      - date: "2024-04-15"
+        assigned_gpu_node: 75
+    distributed_learning: true
+    ignore_project_pattern: "*-dummy"
+
+  ### Matsuo LB ###
+  - company: weblab-geniac 
+    teams:
+      - weblab-geniac1
+      - weblab-geniac2
+      - weblab-geniac3
+      - weblab-geniac4
+      - weblab-geniac5
+      - weblab-geniac6
+      - weblab-geniac7
+      - weblab-geniac8
+    schedule:
+      - date: "2024-04-15"
+        assigned_gpu_node: 21
+
+  ### Sakana AI ###
+  - company: sakanaai-geniac 
+    teams:
+      - sakanaai-geniac
+    schedule:
+      - date: "2024-06-15"
+        assigned_gpu_node: 32
+
+  ### ELYZA ###
+  - company: elyza-geniac
+    teams:
+      - elyza-geniac
+    schedule:
+      - date: "2024-05-24"
+        assigned_gpu_node: 36
+    distributed_learning: true
+
+  ### Kotoba Technologies ###
+  - company: kotoba-geniac
+    teams:
+      - kotoba-geniac
+    schedule:
+      - date: "2024-05-24"
+        assigned_gpu_node: 8
+    distributed_learning: true
+
+  ### 富士通 ###
+  - company: fujitsu-geniac
+    teams:
+      - fujitsu-geniac
+    schedule:
+      - date: "2024-05-24"
+        assigned_gpu_node: 16
+    distributed_learning: true
