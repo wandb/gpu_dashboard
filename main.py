@@ -66,22 +66,9 @@ def main():
     run_manager = RunManager(date_range)
     new_runs_df = run_manager.fetch_runs()
 
-    # CSVファイルに保存
-    new_runs_df.write_csv("dev/new_runs_df.csv")
-    print("Data processing and uploading completed successfully.")
-
-    # ブラックリストの更新
-    # print("Updating blacklist...")
-    # update_blacklist(new_runs_df)
-    # print("Blacklist update completed.")
-
     # RunUploaderを使用してデータを処理しアップロード
     uploader = RunUploader(new_runs_df, date_range)
     processed_df = uploader.process_and_upload_runs()
-
-    # CSVファイルに保存
-    processed_df.write_csv("dev/processed_df.csv")
-    print("Data processing and uploading completed successfully.")
 
     # latestタグを削除
     remove_latest_tags()

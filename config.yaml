@@ -12,12 +12,12 @@ dashboard:
 
 dataset:
   entity: geniac-gpu
-  project: gpu-dashboard2-dev
-  artifact_name: version_20241003
+  project: gpu-dashboard2
+  artifact_name: all_runs_data
 
 blacklist:
   entity: geniac-gpu
-  project: gpu-dashboard2-dev
+  project: gpu-dashboard2
   artifact_name: blacklist
 
 companies:
