@@ -76,7 +76,7 @@ def get_runs() -> object:
 
 
 def check(companies: set[str], runs: object) -> None:
-    # エラーを種週
+    # エラーを収集
     update_errors = []
     companies_found = []
     tag_for_latest = CONFIG.dashboard.tag_for_latest
