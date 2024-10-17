@@ -204,7 +204,7 @@ companies:
       - alt-geniac
     schedule:
       - date: "2024-10-24"
-        assigned_gpu_node: 0
+        assigned_gpu_node: 8
     distributed_learning: false
 
   ### 国立研究開発法人海洋研究開発機構 ###
