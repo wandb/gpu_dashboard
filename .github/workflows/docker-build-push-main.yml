@@ -12,7 +12,7 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: geniac-gpu-main
+  ECR_REPOSITORY: gpu-dashboard-main
   DOCKERFILE: Dockerfile.main
 
 jobs:

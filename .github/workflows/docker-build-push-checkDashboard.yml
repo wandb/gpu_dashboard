@@ -12,7 +12,7 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: check-dashboard
+  ECR_REPOSITORY: gpu-dashboard-check
   DOCKERFILE: Dockerfile.check_dashboard
 
 jobs:
