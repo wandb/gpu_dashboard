@@ -294,7 +294,7 @@ class GPUUsageCalculator:
             print("Warning: No data to update for companies.")
 
         for company_info in CONFIG.companies:
-            company = company_info['company']  # 会社名を正しく抽出
+            company = company_info['company']
             gpu_daily_company_table = gpu_daily_table.filter(pl.col("企業名") == company)
             gpu_weekly_company_table = gpu_weekly_table.filter(pl.col("企業名") == company)
             gpu_summary_company_table = gpu_summary_table.filter(pl.col("company_name") == company)

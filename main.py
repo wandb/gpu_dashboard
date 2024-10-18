@@ -11,8 +11,10 @@ from src.calculator.remove_tags import remove_latest_tags
 from src.calculator.gpu_usage_calculator import GPUUsageCalculator
 
 def validate_dates(start_date, end_date):
+    # 今日の日付を取得
+    LOCAL_TZ = pytz.timezone("Asia/Tokyo")
     default_start = dt.date(2024, 10, 25)
-    default_end = dt.date.today() - dt.timedelta(days=1)
+    default_end = dt.datetime.now(LOCAL_TZ).date() + dt.timedelta(days=-1)
 
     if start_date is None and end_date is None:
         # 両方指定なしの場合、昨日の日付を両方に設定
@@ -26,7 +28,7 @@ def validate_dates(start_date, end_date):
         start = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
         end = default_end
     else:
-        # 両方指定ありの場合
+        # 両方指定ありの場合値をそのまま使用
         start = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
         end = dt.datetime.strptime(end_date, "%Y-%m-%d").date()
 
