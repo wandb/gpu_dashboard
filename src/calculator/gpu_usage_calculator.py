@@ -70,7 +70,6 @@ SELECT_COLS = (
 )
 
 class GPUUsageCalculator:
-
     def __init__(self, all_runs_df: pl.DataFrame, target_date: str):
         self.all_runs_df = all_runs_df
         self.target_date = dt.datetime.strptime(target_date, "%Y-%m-%d").date()
@@ -164,17 +163,28 @@ class GPUUsageCalculator:
                                         "n_runs": pl.Int64, "assigned_gpu_node": pl.Int64, "assigned_gpu_hour": pl.Float64, 
                                         "_total_gpu_hour": pl.Float64, "total_metrics_hour": pl.Float64})
         
+        # 週の開始日と終了日を計算
+        week_end = self.target_date
+        week_start = week_end - dt.timedelta(days=6)
+
         all_runs_df_without_team = self.add_team()
         keys = ["company", "date"]
 
-        # 日曜日を週の開始日として設定
+        # 指定された週のデータのみをフィルタリング
+        all_runs_df_without_team = all_runs_df_without_team.filter(
+            (pl.col("date") >= week_start) & (pl.col("date") <= week_end)
+        )
+
+        # 全てのデータに週の開始日を割り当てる
         all_runs_df_without_team = all_runs_df_without_team.with_columns(
-            (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("date")
+            pl.lit(week_start).alias("date")
         )
 
         gpu_weekly_table = (
-            self.bt.daily_table.with_columns(
-                (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("date")
+            self.bt.daily_table.filter(
+                (pl.col("date") >= week_start) & (pl.col("date") <= week_end)
+            ).with_columns(
+                pl.lit(week_start).alias("date")
             ).join(
                 all_runs_df_without_team,
                 on=keys,
