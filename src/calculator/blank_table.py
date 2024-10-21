@@ -4,7 +4,7 @@ from easydict import EasyDict
 import pandas as pd
 import polars as pl
 
-from config import CONFIG
+from src.utils.config import CONFIG
 
 
 class BlankTable:
@@ -12,6 +12,7 @@ class BlankTable:
         self.target_date = target_date
         self.team_table = team_table()
         self.daily_table = daily_table(target_date=target_date)
+        self.weekly_table = weekly_table(daily_table=self.daily_table)
         self.monthy_table = monthly_table(daily_table=self.daily_table)
         self.overall_table = overall_table(daily_table=self.daily_table)
 
@@ -23,21 +24,25 @@ def daily_table(target_date: dt.date) -> pl.DataFrame:
     for s in schedules:
         # 主要な日付だけのdf
         minimum_schedule_df = pl.DataFrame(s.schedule).with_columns(
-            pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d").cast(pl.Date),
+            pl.col("date").str.strptime(pl.Date, "%Y-%m-%d"),
             pl.col("assigned_gpu_node").cast(pl.Float64),
         )
+        
+        # 日付範囲の開始日と終了日を決定
+        start_date = min(minimum_schedule_df["date"].min(), target_date)
+        end_date = max(minimum_schedule_df["date"].max(), target_date)
+        
         # 日付を拡張
         date_df = pl.DataFrame(
-            pl.datetime_range(
-                start=min(minimum_schedule_df["date"]),
-                end=target_date,
+            pl.date_range(
+                start=start_date,
+                end=end_date,
                 interval="1d",
                 eager=True,
-            )
-            .cast(pl.Date)
-            .alias("date")
+            ).alias("date")
         )
-        # 全期間にしてgpu_nodeの欠損を埋める
+        
+        # 以下は変更なし
         company_schedule_df = (
             date_df.join(minimum_schedule_df, on=["date"], how="left")
             .with_columns(
@@ -49,13 +54,30 @@ def daily_table(target_date: dt.date) -> pl.DataFrame:
                 pl.col("date").cast(pl.Date),
                 pl.col("assigned_gpu_node").cast(pl.Int64),
             ).filter(
-                # 提供終了した日付は削除
-                pl.col("assigned_gpu_node")>0
+                pl.col("assigned_gpu_node") > 0
             )
         )
         df_list.append(company_schedule_df)
     schedule_df = pl.concat(df_list)
     return schedule_df
+
+
+def weekly_table(daily_table: pl.DataFrame) -> pl.DataFrame:
+    """日次テーブルから週次テーブルを作成"""
+    weekly_table = (
+        daily_table.with_columns(
+            (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("date")
+        )
+        .group_by("company", "date")
+        .agg(pl.col("assigned_gpu_node").sum())
+        .sort("date", "company")
+        .select(
+            pl.col("company").cast(pl.Utf8),
+            pl.col("date").cast(pl.Date),
+            pl.col("assigned_gpu_node").cast(pl.Int64),
+        )
+    )
+    return weekly_table
 
 
 def monthly_table(daily_table: pl.DataFrame) -> pl.DataFrame:

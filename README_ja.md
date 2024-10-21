@@ -186,7 +186,7 @@ $ . .venv/bin/activate
 
 ## Appendix
 ### Blacklistの更新
-定期実行時に`ignore_tag`を付け忘れたrunは以降もGPU稼働時間に集計されてしまうので、tagを付与後にスクリプトを回すことで集計から除外する。
+定期実行時に`ignore_tags`を付け忘れたrunは以降もGPU稼働時間に集計されてしまうので、tagを付与後にスクリプトを回すことで集計から除外する。
 
 ```shell
 $ cd gpu-dashboard

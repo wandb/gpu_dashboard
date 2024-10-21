@@ -188,7 +188,7 @@ $ . .venv/bin/activate
 
 ## Appendix
 ### Update Blacklist
-If you forget to add the `ignore_tag` during regular execution, runs will continue to be counted towards GPU usage. To exclude them from the calculation, add the tag and run the script.
+If you forget to add the `ignore_tags` during regular execution, runs will continue to be counted towards GPU usage. To exclude them from the calculation, add the tag and run the script.
 
 ```shell
 $ cd gpu-dashboard
