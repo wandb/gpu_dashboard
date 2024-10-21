@@ -28,6 +28,8 @@ companies:
     schedule:
       - date: "2024-11-06"
         assigned_gpu_node: 6
+      - date: "2025-11-02"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### AIdeaLab ###
@@ -37,6 +39,8 @@ companies:
     schedule:
       - date: "2024-11-01"
         assigned_gpu_node: 2
+      - date: "2025-05-01"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### AiHUB ###
@@ -46,6 +50,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 5
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### AI inside ###
@@ -55,6 +61,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 3
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### EQUES ###
@@ -64,6 +72,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 1
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### Kotoba Technologies Japan ###
@@ -73,6 +83,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 29
+      - date: "2025-04-23"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### NABLAS ###
@@ -82,6 +94,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 4
+      - date: "2025-05-01"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### SyntheticGestalt ###
@@ -91,6 +105,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 30
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### オルツ ###
@@ -100,6 +116,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 16
+      - date: "2025-05-01"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### 国立研究開発法人海洋研究開発機構 ###
@@ -109,6 +127,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 2
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### カラクリ ###
@@ -118,6 +138,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 24
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### ストックマーク ###
@@ -127,6 +149,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 42
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### データグリッド ###
@@ -136,6 +160,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 16
+      - date: "2025-05-01"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### ヒューマノーム研究所 ###
@@ -145,6 +171,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 4
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### フューチャー研究所 ###
@@ -154,6 +182,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 4
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### リコー ###
@@ -163,6 +193,8 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 8
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
 
   ### ユビタス ###
@@ -172,4 +204,6 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 32
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
     distributed_learning: false
