@@ -1,0 +1,192 @@
+testmode: false
+enable_alert: false
+ignore_tags: ["other_gpu", "others_gpu"]  # 増えるようだったらfnmatchで対応する
+wandb_dir: /tmp/wandb
+max_workers: 1
+
+dashboard:
+  entity: geniac-gpu
+  project: gpu-dashboard2
+  # project: gpu-dashboard2-dev  # for development
+  tag_for_latest: latest
+
+dataset:
+  entity: geniac-gpu
+  project: gpu-dashboard2
+  artifact_name: all_runs_data
+
+blacklist:
+  entity: geniac-gpu
+  project: gpu-dashboard2
+  artifact_name: blacklist
+
+companies:
+  ### ABEJA ###
+  - company: abeja-geniac
+    teams:
+      - abeja-geniac
+    schedule:
+      - date: "2024-11-06"
+        assigned_gpu_node: 6
+      - date: "2025-11-02"
+        assigned_gpu_node: 0
+
+  ### AIdeaLab ###
+  - company: aidealab-geniac
+    teams:
+      - aidealab-geniac
+    schedule:
+      - date: "2024-11-01"
+        assigned_gpu_node: 2
+      - date: "2025-05-01"
+        assigned_gpu_node: 0
+
+  ### AiHUB ###
+  - company: aihub-geniac
+    teams:
+      - aihub-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 5
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### AI inside ###
+  - company: aiinside-geniac
+    teams:
+      - aiinside-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 3
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### EQUES ###
+  - company: eques-geniac
+    teams:
+      - eques-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 1
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### Kotoba Technologies Japan ###
+  - company: kotoba-geniac
+    teams:
+      - kotoba-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 29
+      - date: "2025-04-23"
+        assigned_gpu_node: 0
+
+  ### NABLAS ###
+  - company: nablas-geniac
+    teams:
+      - nablas-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 4
+      - date: "2025-05-01"
+        assigned_gpu_node: 0
+
+  ### SyntheticGestalt ###
+  - company: syntheticgestalt-geniac
+    teams:
+      - syntheticgestalt-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 30
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### オルツ ###
+  - company: alt-geniac
+    teams:
+      - alt-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 16
+      - date: "2025-05-01"
+        assigned_gpu_node: 0
+
+  ### 国立研究開発法人海洋研究開発機構 ###
+  - company: jamstec-geniac
+    teams:
+      - jamstec-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 2
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### カラクリ ###
+  - company: karakuri-geniac
+    teams:
+      - karakuri-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 24
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### ストックマーク ###
+  - company: stockmark-geniac
+    teams:
+      - stockmark-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 42
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### データグリッド ###
+  - company: datagrid-geniac
+    teams:
+      - datagrid-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 16
+      - date: "2025-05-01"
+        assigned_gpu_node: 0
+
+  ### ヒューマノーム研究所 ###
+  - company: humanome-geniac
+    teams:
+      - humanome-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 4
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### フューチャー研究所 ###
+  - company: future-geniac
+    teams:
+      - future-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 4
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### リコー ###
+  - company: ricoh-geniac
+    teams:
+      - ricoh-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 8
+      - date: "2025-04-24"
+        assigned_gpu_node: 0
+
+  ### ユビタス ###
+  - company: ubitus-geniac
+    teams:
+      - ubitus-geniac
+    schedule:
+      - date: "2024-10-25"
+        assigned_gpu_node: 32
+      - date: "2025-04-24"
+        assigned_gpu_node: 0

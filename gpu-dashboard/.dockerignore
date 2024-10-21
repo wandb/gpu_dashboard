@@ -1,7 +1,0 @@
-__pycache__
-.venv
-blacklist
-wandb
-debug.ipynb
-deploy.sh
-run.py
