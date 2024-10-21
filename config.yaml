@@ -30,7 +30,6 @@ companies:
         assigned_gpu_node: 6
       - date: "2025-11-02"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### AIdeaLab ###
   - company: aidealab-geniac
@@ -41,7 +40,6 @@ companies:
         assigned_gpu_node: 2
       - date: "2025-05-01"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### AiHUB ###
   - company: aihub-geniac
@@ -52,7 +50,6 @@ companies:
         assigned_gpu_node: 5
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### AI inside ###
   - company: aiinside-geniac
@@ -63,7 +60,6 @@ companies:
         assigned_gpu_node: 3
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### EQUES ###
   - company: eques-geniac
@@ -74,7 +70,6 @@ companies:
         assigned_gpu_node: 1
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### Kotoba Technologies Japan ###
   - company: kotoba-geniac
@@ -85,7 +80,6 @@ companies:
         assigned_gpu_node: 29
       - date: "2025-04-23"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### NABLAS ###
   - company: nablas-geniac
@@ -96,7 +90,6 @@ companies:
         assigned_gpu_node: 4
       - date: "2025-05-01"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### SyntheticGestalt ###
   - company: syntheticgestalt-geniac
@@ -107,7 +100,6 @@ companies:
         assigned_gpu_node: 30
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### オルツ ###
   - company: alt-geniac
@@ -118,7 +110,6 @@ companies:
         assigned_gpu_node: 16
       - date: "2025-05-01"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### 国立研究開発法人海洋研究開発機構 ###
   - company: jamstec-geniac
@@ -129,7 +120,6 @@ companies:
         assigned_gpu_node: 2
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### カラクリ ###
   - company: karakuri-geniac
@@ -140,7 +130,6 @@ companies:
         assigned_gpu_node: 24
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### ストックマーク ###
   - company: stockmark-geniac
@@ -151,7 +140,6 @@ companies:
         assigned_gpu_node: 42
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### データグリッド ###
   - company: datagrid-geniac
@@ -162,7 +150,6 @@ companies:
         assigned_gpu_node: 16
       - date: "2025-05-01"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### ヒューマノーム研究所 ###
   - company: humanome-geniac
@@ -173,7 +160,6 @@ companies:
         assigned_gpu_node: 4
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### フューチャー研究所 ###
   - company: future-geniac
@@ -184,7 +170,6 @@ companies:
         assigned_gpu_node: 4
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### リコー ###
   - company: ricoh-geniac
@@ -195,7 +180,6 @@ companies:
         assigned_gpu_node: 8
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
 
   ### ユビタス ###
   - company: ubitus-geniac
@@ -206,4 +190,3 @@ companies:
         assigned_gpu_node: 32
       - date: "2025-04-24"
         assigned_gpu_node: 0
-    distributed_learning: false
