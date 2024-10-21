@@ -21,117 +21,12 @@ blacklist:
   artifact_name: blacklist
 
 companies:
-# ### 第一弾企業 ###
-#   ### ABEJA ###
-#   - company: abeja-geniac 
-#     teams:
-#       - abeja-geniac
-#     schedule:
-#       - date: "2024-02-15"
-#         assigned_gpu_node: 48
-#       - date: "2024-04-15" # end of GPU provision
-#         assigned_gpu_node: 0
-
-#   ### PFE ###
-#   - company: pfe-geniac 
-#     teams:
-#       - pfe-geniac
-#     schedule:
-#       - date: "2024-02-15"
-#         assigned_gpu_node: 50
-#       - date: "2024-07-16"
-#         assigned_gpu_node: 52
-
-#   ### Stockmark ###
-#   - company: stockmark-geniac 
-#     teams:
-#       - stockmark-geniac
-#     schedule:
-#       - date: "2024-02-15"
-#         assigned_gpu_node: 48
-#       - date: "2024-04-15" # end of GPU provision
-#         assigned_gpu_node: 0
-#     ignore_project_pattern: "100b"
-
-#   ### Turing ###
-#   - company: turing-geniac 
-#     teams:
-#       - turing-geniac
-#     schedule:
-#       - date: "2024-02-15"
-#         assigned_gpu_node: 4
-#       - date: "2024-06-15"
-#         assigned_gpu_node: 35
-#     distributed_learning: true
-
-#   ### NII ###
-#   - company: nii-geniac 
-#     teams:
-#       - nii-geniac
-#     schedule:
-#       - date: "2024-04-15"
-#         assigned_gpu_node: 75
-#     distributed_learning: true
-#     ignore_project_pattern: "*-dummy"
-
-#   ### Matsuo LB ###
-#   - company: weblab-geniac 
-#     teams:
-#       - weblab-geniac1
-#       - weblab-geniac2
-#       - weblab-geniac3
-#       - weblab-geniac4
-#       - weblab-geniac5
-#       - weblab-geniac6
-#       - weblab-geniac7
-#       - weblab-geniac8
-#     schedule:
-#       - date: "2024-04-15"
-#         assigned_gpu_node: 21
-
-#   ### Sakana AI ###
-#   - company: sakanaai-geniac 
-#     teams:
-#       - sakanaai-geniac
-#     schedule:
-#       - date: "2024-06-15"
-#         assigned_gpu_node: 32
-
-#   ### ELYZA ###
-#   - company: elyza-geniac
-#     teams:
-#       - elyza-geniac
-#     schedule:
-#       - date: "2024-05-24"
-#         assigned_gpu_node: 36
-#     distributed_learning: true
-
-#   ### Kotoba Technologies ###
-#   - company: kotoba-geniac
-#     teams:
-#       - kotoba-geniac
-#     schedule:
-#       - date: "2024-05-24"
-#         assigned_gpu_node: 8
-#     distributed_learning: true
-
-#   ### 富士通 ###
-#   - company: fujitsu-geniac
-#     teams:
-#       - fujitsu-geniac
-#     schedule:
-#       - date: "2024-05-24"
-#         assigned_gpu_node: 16
-#     distributed_learning: true
-
-
-### 第二弾企業 ###
   ### ABEJA ###
   - company: abeja-geniac
     teams:
       - abeja-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-11-06"
         assigned_gpu_node: 6
     distributed_learning: false
 
@@ -140,7 +35,7 @@ companies:
     teams:
       - aidealab-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-11-01"
         assigned_gpu_node: 2
     distributed_learning: false
 
@@ -149,7 +44,7 @@ companies:
     teams:
       - aihub-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 5
     distributed_learning: false
 
@@ -158,7 +53,7 @@ companies:
     teams:
       - aiinside-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 3
     distributed_learning: false
 
@@ -167,7 +62,7 @@ companies:
     teams:
       - eques-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 1
     distributed_learning: false
 
@@ -176,7 +71,7 @@ companies:
     teams:
       - kotoba-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 29
     distributed_learning: false
 
@@ -185,7 +80,7 @@ companies:
     teams:
       - nablas-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 4
     distributed_learning: false
 
@@ -194,8 +89,8 @@ companies:
     teams:
       - syntheticgestalt-geniac
     schedule:
-      - date: "2024-10-24"
-        assigned_gpu_node: 0
+      - date: "2024-10-25"
+        assigned_gpu_node: 30
     distributed_learning: false
 
   ### オルツ ###
@@ -203,8 +98,8 @@ companies:
     teams:
       - alt-geniac
     schedule:
-      - date: "2024-10-24"
-        assigned_gpu_node: 8
+      - date: "2024-10-25"
+        assigned_gpu_node: 16
     distributed_learning: false
 
   ### 国立研究開発法人海洋研究開発機構 ###
@@ -212,7 +107,7 @@ companies:
     teams:
       - jamstec-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 2
     distributed_learning: false
 
@@ -221,7 +116,7 @@ companies:
     teams:
       - karakuri-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 24
     distributed_learning: false
 
@@ -230,7 +125,7 @@ companies:
     teams:
       - stockmark-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 42
     distributed_learning: false
 
@@ -239,7 +134,7 @@ companies:
     teams:
       - datagrid-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 16
     distributed_learning: false
 
@@ -248,7 +143,7 @@ companies:
     teams:
       - humanome-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 4
     distributed_learning: false
 
@@ -257,7 +152,7 @@ companies:
     teams:
       - future-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 4
     distributed_learning: false
 
@@ -266,7 +161,7 @@ companies:
     teams:
       - ricoh-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 8
     distributed_learning: false
 
@@ -275,6 +170,6 @@ companies:
     teams:
       - ubitus-geniac
     schedule:
-      - date: "2024-10-24"
+      - date: "2024-10-25"
         assigned_gpu_node: 32
     distributed_learning: false
