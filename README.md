@@ -224,3 +224,56 @@ python src/alart/check_dashboard.py
         - Aggregate summary data
     - Update overall table
     - Update tables for each company
+
+Here's the English translation of the text:
+
+### GPU Count Calculation Examples for Distributed Processing
+In the __set_gpucount method within src/tracker/run_manager.py,
+GPU counts for distributed processing are calculated based on different teams and configurations. Below are the calculation methods and specific examples.
+
+## 1. When num_nodes and num_gpus values are included in the config
+
+### Calculation Method
+- Retrieve the values of `num_nodes` and `num_gpus`, and multiply them to calculate the GPU count.
+- These values are obtained from the `config` section in the configuration file.
+
+### Specific Example
+config = {
+    "num_nodes": 2,
+    "num_gpus": 8
+}
+
+gpu_count = 2 * 8 = 16
+
+In this example, there are 2 nodes, each with 8 GPUs, resulting in a total GPU count of 16.
+
+## 2. When world_size is included in the config
+
+### Calculation Method
+- Use the value of `world_size` to determine the GPU count.
+- `world_size` is obtained from the `config` section in the configuration file.
+
+### Specific Example
+config = {
+    "world_size": 16
+}
+
+gpu_count = 16
+
+In this example, the value of `world_size` is directly used as the GPU count.
+
+## 3. When distributed processing settings cannot be obtained from the config
+
+### Calculation Method
+- Use the value of `node.runInfo.gpuCount`.
+
+node.runInfo = {
+    "gpuCount": 8
+}
+
+gpu_count = 8
+
+In this example, the GPU count is directly obtained from `runInfo`.
+
+## Notes
+This method aims to calculate the GPU count as accurately as possible by accommodating various configuration formats. However, when encountering unexpected data formats, it sets the GPU count to 0 for safety and outputs a warning.
