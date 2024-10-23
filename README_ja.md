@@ -1,37 +1,46 @@
 # gpu-dashboard
-Extract gpu usage across the teams.
+このリポジトリは、GPU使用状況を追跡し、ダッシュボードを生成するためのツールです。
+
+## 主な機能
+1. 複数の企業やプロジェクトからGPU使用データを収集
+2. 日次、週次、月次、および全期間のGPU使用状況レポートを生成
+3. Weights & Biases (wandb) を使用してダッシュボードを更新
+4. 異常なGPU使用率の検出とアラート機能
+
 ## Architecture
 ![Architecture](./image/gpu-dashboard.drawio.png)
 
 ## このリポジトリのディレクトリ構成
 ```
 .
+├── Dockerfile.check_dashboard
+├── Dockerfile.main
 ├── README.md
-├── check-dashboard  # for monitoring cron
-│   ├── Dockerfile
-│   ├── check_dashboard.py
-│   ├── config.yaml
-│   └── requirements.txt
-├── gpu-dashboard  # for cron
-│   ├── Dockerfile
-│   ├── GpuUsage.py
-│   ├── blacklist
-│   ├── blank_table.py
-│   ├── config.py
-│   ├── config.yaml
-│   ├── fetch_runs.py
-│   ├── handle_artifacts.py
-│   ├── remove_tags.py
-│   ├── requirements.txt
-│   ├── run.py
-│   ├── update_blacklist.py
-│   └── update_tables.py
+├── config.yaml
+├── main.py
+├── requirements.txt
+├── src
+│   ├── alart
+│   │   └── check_dashboard.py
+│   ├── calculator
+│   │   ├── blank_table.py
+│   │   ├── gpu_usage_calculator.py
+│   │   └── remove_tags.py
+│   ├── tracker
+│   │   ├── config_parser.py
+│   │   └── run_manager.py
+│   ├── uploader
+│   │   ├── artifact_handler.py
+│   │   ├── data_processor.py
+│   │   └── run_uploader.py
+│   └── utils
+│       └── config.py
 └── image
     └── gpu-dashboard.drawio.png
 ```
 
 ## ローカルの環境構築
-Execute below command in both check-dashboard directory and gpu-dashboard directory.
+gpu-dashboard ディレクトリで以下のコマンドを実行します。
 ```
 $ python3 -m venv .venv
 $ . .venv/bin/activate
@@ -52,11 +61,11 @@ $ pip install -r requirements.txt
 
 ### AWS CLI設定
 `IAM`にてAWS CLI用のユーザーを作成する。下記サービスにアクセス権限を付与する。
-- ECR  
+- ECR
 
 作成したユーザーをクリックし、アクセスキーのタブにて以下の文字列を控える
 - Access key ID
-- Secret access key  
+- Secret access key
   
 下記コマンドをローカルのTerminalで実行し、AWSにログインする。
 
@@ -101,7 +110,7 @@ $ docker push 111122223333.dkr.ecr.ap-northeast-1.amazonaws.com/geniac-gpu:lates
 ```
 > コマンドはリポジトリで一意に決まるため上記コマンドをShellスクリプトに記載することで2回目以降は簡単にデプロイできます
 
-上記手順を`gpu-dashboard`ディレクトリと`check-dashboard`ディレクトリにてそれぞれ行うこと
+上記手順で`gpu-dashboard`と`check-dashboard`それぞれのリポジトリを作成する
 
 ### VPC
 - `仮想プライベートクラウド > お使いのVPC`に移動する
@@ -141,8 +150,6 @@ $ docker push 111122223333.dkr.ecr.ap-northeast-1.amazonaws.com/geniac-gpu:lates
     - 値: {Your WANDB_API_KEY}
 - `作成`をクリックする
 
-上記手順を`gpu-dashboard`ディレクトリと`check-dashboard`ディレクトリにてそれぞれ行うこと
-
 #### タスク作成
 - `Amazon Elastic Container Service > クラスター > {クラスター名} > スケジュールされたタスク`に移動する
 - `作成`をクリックする
@@ -156,13 +163,10 @@ $ docker push 111122223333.dkr.ecr.ap-northeast-1.amazonaws.com/geniac-gpu:lates
 - `セキュリティグループ`に既存のセキュリティグループがなければ`新しいセキュリティグループの作成`を選択しセキュリティグループを作成する
 - `作成`をクリックする
 
-上記手順を`gpu-dashboard`ディレクトリと`check-dashboard`ディレクトリにてそれぞれ行うこと
-
 ## デバッグ
 ### ローカルの環境構築
-下記のコマンドを実行して、定期実行スクリプトのpython環境を構築する。  
-`debug.ipynb`というファイルを作成してデバッグすると良い。  
-`config.yaml`を編集することで本番環境への影響を抑えられる。  
+下記のコマンドを実行して、定期実行スクリプトのローカル実行python環境を構築する。
+`config.yaml`を編集することで本番環境への影響を抑えられる。
 
 ```shell
 $ cd gpu-dashboard
@@ -170,14 +174,25 @@ $ python3 -m venv .venv
 $ . .venv/bin/activate
 ```
 
-同様に、下記のコマンドを実行して、定期実行チェックスクリプトのpython環境を構築する。  
-このディレクトリでも同様に`debug.ipynb`というファイルを作成してデバッグすると良い。  
-
+### 使用方法
+#### メインスクリプトの実行
 ```shell
-$ cd check-dashboard
-$ python3 -m venv .venv
-$ . .venv/bin/activate
+python main.py [--api WANDB_API_KEY] [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD]
 ```
+--api: wandb APIキー（オプション、環境変数で設定可能）
+--start-date: データ取得開始日（オプション）
+--end-date: データ取得終了日（オプション）
+
+#### ダッシュボードの健全性チェック
+```shell
+python src/alart/check_dashboard.py
+```
+
+### 主要コンポーネント
+- src/tracker/: GPU使用データの収集
+- src/calculator/: GPU使用統計の計算
+- src/uploader/: wandbへのデータアップロード
+- src/alart/: 異常検出とアラート機能
 
 ### ログの確認方法
 - AWSで`CloudWatch > ロググループ`に移動する
@@ -185,20 +200,10 @@ $ . .venv/bin/activate
 - ログストリームをクリックしてログを確認する
 
 ## Appendix
-### Blacklistの更新
-定期実行時に`ignore_tags`を付け忘れたrunは以降もGPU稼働時間に集計されてしまうので、tagを付与後にスクリプトを回すことで集計から除外する。
-
-```shell
-$ cd gpu-dashboard
-$ python3 -m venv .venv
-$ . .venv/bin/activate
-$ python3 update_blacklist.py
-```
-
-
 ### プログラムの処理手順
-- 最新データ取得
-    - target_dateを設定
+- 最新データ取得(src/tracker/)
+    - start_dateとend_dateを設定
+        - 未指定の場合はデフォルトで両方の値が昨日の日付に設定される
     - companyのリストを作成
     - companyごとにprojectを取得[Public API]
     - projectごとにrunを取得[Private API]
@@ -206,14 +211,17 @@ $ python3 update_blacklist.py
     - 同じインスタンスで複数回wanb.initをしているrunを検出しアラート
     - runごとにsystem metricsを取得[Public API]
     - run id x 日付で集計
-- データ更新
+- データ更新(src/uploader/)
     - 昨日までのcsvをArtifactsから取得
     - 最新分をconcatしてArtifactsに保存
     - run idのフィルタリング
-- 集計
-    - overallを集計
-    - monthlyを集計
-    - daily companyを集計
-- テーブル更新
-    - latestタグをリセット
-    - テーブルを出力
+- データの集計と更新(src/calculator)
+    - latestタグの削除
+    - 取得したデータについて集計
+        - 全体のデータを集計
+        - 月次のデータを集計
+        - 週次のデータを集計
+        - 日次のデータを集計
+        - サマリーデータを集計
+    - overallテーブルを更新
+    - 企業毎のテーブルを更新
