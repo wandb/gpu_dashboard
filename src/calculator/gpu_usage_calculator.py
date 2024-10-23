@@ -73,8 +73,9 @@ SELECT_COLS = (
 class GPUUsageCalculator:
     def __init__(self, all_runs_df: pl.DataFrame, date_range: List):
         self.all_runs_df = all_runs_df
-        self.target_date = dt.datetime.strptime(date_range[1], "%Y-%m-%d").date()
-        self.bt = BlankTable(target_date=self.target_date)
+        self.start_date = dt.datetime.strptime(date_range[0], "%Y-%m-%d").date()
+        self.end_date = dt.datetime.strptime(date_range[1], "%Y-%m-%d").date()
+        self.bt = BlankTable(target_date=self.end_date)
 
     def add_team(self) -> pl.DataFrame:
         if self.all_runs_df.is_empty():
@@ -165,7 +166,7 @@ class GPUUsageCalculator:
                                         "_total_gpu_hour": pl.Float64, "total_metrics_hour": pl.Float64})
         
         # 週の開始日と終了日を計算
-        week_end = self.target_date
+        week_end = self.end_date
         week_start = week_end - dt.timedelta(days=6)
 
         all_runs_df_without_team = self.add_team()
