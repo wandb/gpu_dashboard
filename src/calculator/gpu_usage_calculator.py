@@ -223,7 +223,7 @@ class GPUUsageCalculator:
         keys = ["company", "year_month"]
 
         gpu_monthly_table = (
-            self.bt.monthy_table.join(
+            self.bt.monthly_table.join(
                 all_runs_df_without_team,
                 on=keys,
                 how="left",

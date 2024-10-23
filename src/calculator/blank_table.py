@@ -13,7 +13,7 @@ class BlankTable:
         self.team_table = team_table()
         self.daily_table = daily_table(target_date=target_date)
         self.weekly_table = weekly_table(daily_table=self.daily_table)
-        self.monthy_table = monthly_table(daily_table=self.daily_table)
+        self.monthly_table = monthly_table(daily_table=self.daily_table)
         self.overall_table = overall_table(daily_table=self.daily_table)
 
 
