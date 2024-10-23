@@ -14,6 +14,5 @@ class RunUploader:
     def process_and_upload_runs(self):
         old_runs_df = ArtifactHandler.read_dataset()
         all_runs_df = DataProcessor.combine_df(new_runs_df=self.new_runs_df, old_runs_df=old_runs_df)
-        # .pipe(DataProcessor.apply_blacklist)
         ArtifactHandler.update_dataset(all_runs_df=all_runs_df, date_range=self.date_range)
         return all_runs_df

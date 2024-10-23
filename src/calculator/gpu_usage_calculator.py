@@ -1,6 +1,7 @@
 import datetime as dt
 import polars as pl
 import wandb
+from typing import List
 from src.calculator.blank_table import BlankTable
 from src.utils.config import CONFIG
 
@@ -70,9 +71,9 @@ SELECT_COLS = (
 )
 
 class GPUUsageCalculator:
-    def __init__(self, all_runs_df: pl.DataFrame, target_date: str):
+    def __init__(self, all_runs_df: pl.DataFrame, date_range: List):
         self.all_runs_df = all_runs_df
-        self.target_date = dt.datetime.strptime(target_date, "%Y-%m-%d").date()
+        self.target_date = dt.datetime.strptime(date_range[1], "%Y-%m-%d").date()
         self.bt = BlankTable(target_date=self.target_date)
 
     def add_team(self) -> pl.DataFrame:
