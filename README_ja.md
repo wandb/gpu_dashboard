@@ -225,3 +225,54 @@ python src/alart/check_dashboard.py
         - サマリーデータを集計
     - overallテーブルを更新
     - 企業毎のテーブルを更新
+
+### 分散処理のGPU数の計算例
+src/tracker/run_manager.py内の__set_gpucountメソッドにおいて、
+異なるチームや設定に基づいて分散処理時のGPU数を計算します。以下に、計算方法と具体例を示します。
+
+## 1. num_nodesとnum_gpusの値がconfigに含まれている場合
+
+### 計算方法
+- `num_nodes` と `num_gpus` の値を取得し、それらを掛け合わせてGPU数を計算します。
+- これらの値は設定ファイル内の `config` セクションから取得されます。
+
+### 具体例
+config = {
+    "num_nodes": 2,
+    "num_gpus": 8
+}
+
+gpu_count = 2 * 8 = 16
+
+この例では、2つのノードがあり、各ノードに8つのGPUがあるため、合計GPU数は16となります。
+
+## 2. world_sizeがconfigに含まれている場合
+
+### 計算方法
+- `world_size` の値を使用してGPU数を決定します。
+- `world_size` は設定ファイル内の `config` セクションから取得されます。
+
+### 具体例
+config = {
+    "world_size": 16
+}
+
+gpu_count = 16
+
+この例では、`world_size` の値がそのままGPU数として使用されます。
+
+## 3. configから分散処理の設定が取得できない場合
+
+### 計算方法
+- `node.runInfo.gpuCount` の値を使用します。
+
+node.runInfo = {
+    "gpuCount": 8
+}
+
+gpu_count = 8
+
+この例では、`runInfo` から直接GPU数を取得しています。
+
+## 注意事項
+このメソッドは、様々な形式の設定に対応し、可能な限り正確なGPU数を計算することを目指しています。ただし、予期しない形式のデータに遭遇した場合は、安全のためにGPU数を0とし、警告を出力します。
