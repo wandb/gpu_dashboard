@@ -1,9 +1,7 @@
 import wandb
-import pytz
 import re
 import json
 import time
-import ast
 import gc
 import threading
 from functools import wraps
@@ -11,62 +9,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 import datetime as dt
 import polars as pl
 from fnmatch import fnmatch
-from dataclasses import dataclass, field
 from tqdm import tqdm
 from easydict import EasyDict
 from typing import List
 from wandb_gql import gql
 
+from src.tracker.common import JAPAN_UTC_OFFSET, LOGGED_AT, GQL_QUERY, Run, Project
 from src.tracker.config_parser import parse_configs
+from src.tracker.set_gpucount import set_gpucount
 from src.utils.config import CONFIG
-
-JAPAN_TIMEZONE = pytz.timezone("Asia/Tokyo")
-LOGGED_AT = dt.datetime.now(JAPAN_TIMEZONE).replace(tzinfo=None)
-JAPAN_UTC_OFFSET = 9
-
-GQL_QUERY = """
-query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $cursor: String!) {
-    project(name: $project, entityName: $entity) {
-        name
-        runs(first: $first, after: $cursor) {
-            edges {
-                cursor
-                node {
-                    name
-                    createdAt
-                    updatedAt
-                    heartbeatAt
-                    state
-                    tags
-                    host
-                    runInfo {
-                        gpuCount
-                        gpu
-                    }
-                    config
-                }
-            }
-        }
-    }
-}
-"""
-
-@dataclass
-class Run:
-    run_path: str
-    created_at: dt.datetime
-    updated_at: dt.datetime
-    state: str
-    tags: list[str]
-    host_name: str
-    gpu_name: str
-    gpu_count: int
-    metrics_df: pl.DataFrame = pl.DataFrame()
-
-@dataclass
-class Project:
-    project: str
-    runs: list[Run] = field(default_factory=list)
 
 def timeout(seconds):
     def decorator(func):
@@ -130,7 +81,7 @@ class RunManager:
                     team_config.projects = []
             else:
                 team_config.projects = []
-    
+
     def __get_runs(self):
         for team_config in self.team_configs:
             print(f"Get runs for {team_config.team} ...")
@@ -174,8 +125,6 @@ class RunManager:
                         new_run_df = self.__create_run_df(run)
                         if not new_run_df.is_empty():
                             combined_df = pl.concat([combined_df, new_run_df])
-                        else:
-                            print(f"Warning: Empty DataFrame created for run {run.run_path}")
                     except Exception as e:
                         print(f"Error processing run {run.run_path}: {str(e)}")
                         print(f"Run details: created_at={run.created_at}, updated_at={run.updated_at}, state={run.state}")
@@ -227,7 +176,7 @@ class RunManager:
 
             if self.__is_run_valid(node, createdAt, updatedAt, start, end) or self.test_mode:
                 run_path = "/".join((team, project, node.name))
-                gpu_count = self.__set_gpucount(node, team)
+                gpu_count = set_gpucount(node, team)
                 run = Run(
                     run_path=run_path,
                     updated_at=updatedAt,
@@ -522,9 +471,3 @@ class RunManager:
             gpu_count = node.runInfo.gpuCount if node.runInfo else 0
 
         return gpu_count
-
-if __name__ == "__main__":
-    date_range = ["2024-02-15", "2024-10-11"]
-    rm = RunManager(date_range, True)
-    df = rm.fetch_runs()
-    df.write_csv("dev/new_runs_df.csv")
