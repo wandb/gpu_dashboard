@@ -1,5 +1,4 @@
-testmode: false
-enable_alert: false
+enable_alert: true
 ignore_tags: ["other_gpu", "others_gpu"]  # 増えるようだったらfnmatchで対応する
 wandb_dir: /tmp/wandb
 max_workers: 1
@@ -14,11 +13,6 @@ dataset:
   entity: geniac-gpu
   project: gpu-dashboard2
   artifact_name: all_runs_data
-
-blacklist:
-  entity: geniac-gpu
-  project: gpu-dashboard2
-  artifact_name: blacklist
 
 companies:
   ### ABEJA ###
@@ -97,7 +91,7 @@ companies:
       - syntheticgestalt-geniac
     schedule:
       - date: "2024-10-25"
-        assigned_gpu_node: 30
+        assigned_gpu_node: 13
       - date: "2025-04-24"
         assigned_gpu_node: 0
 
@@ -140,6 +134,7 @@ companies:
         assigned_gpu_node: 42
       - date: "2025-04-24"
         assigned_gpu_node: 0
+    include_project_pattern: "gpu-info"
 
   ### データグリッド ###
   - company: datagrid-geniac
