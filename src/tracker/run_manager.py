@@ -139,6 +139,8 @@ class RunManager:
                 project.runs = self.__query_runs(
                     team=team_config.team,
                     project=project.project,
+                    start=team_config.start_date,
+                    end=team_config.end_date,
                     )
         print(f"\nTotal valid runs across all projects: {self.total_valid_runs}")
     
@@ -186,7 +188,7 @@ class RunManager:
             print("Warning: No valid DataFrames were created.")
             return pl.DataFrame()
     
-    def __query_runs(self, team: str, project: str) -> list[Run]:
+    def __query_runs(self, team: str, project: str, start: str, end: str) -> list[Run]:
         cursor = ""
         nodes = []
         total_processed = 0
@@ -206,7 +208,7 @@ class RunManager:
                 )
                 _edges = results["project"]["runs"]["edges"]
                 if not _edges:
-                    return self.__process_nodes(nodes, team, project)
+                    return self.__process_nodes(nodes, team, project, start, end)
                 new_nodes = [EasyDict(e["node"]) for e in _edges]
                 nodes += new_nodes
                 total_processed += len(new_nodes)
@@ -215,15 +217,15 @@ class RunManager:
             except Exception as e:
                 print(f"Failed to execute query for {team}/{project}")
                 print(f"Error details: {str(e)}")
-                return self.__process_nodes(nodes, team, project)
+                return self.__process_nodes(nodes, team, project, start, end)
     
-    def __process_nodes(self, nodes: List[EasyDict], team: str, project: str) -> List[Run]:
+    def __process_nodes(self, nodes: List[EasyDict], team: str, project: str, start: str, end: str) -> List[Run]:
         runs = []
         for node in nodes:
             createdAt = dt.datetime.fromisoformat(node.createdAt.rstrip('Z')) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
             updatedAt = dt.datetime.fromisoformat(node.heartbeatAt.rstrip('Z')) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
 
-            if self.__is_run_valid(node, createdAt, updatedAt) or self.test_mode:
+            if self.__is_run_valid(node, createdAt, updatedAt, start, end) or self.test_mode:
                 run_path = "/".join((team, project, node.name))
                 gpu_count = self.__set_gpucount(node, team)
                 run = Run(
@@ -241,7 +243,7 @@ class RunManager:
         print(f"Total valid runs for {team}/{project}: {len(runs)}")
         return runs
 
-    def __is_run_valid(self, node, createdAt, updatedAt) -> bool:
+    def __is_run_valid(self, node, createdAt, updatedAt, start, end) -> bool:
         # 必要な情報が含まれていないものはスキップ
         if not node.get("runInfo"):
             return False
@@ -256,19 +258,12 @@ class RunManager:
         if createdAt.timestamp() == updatedAt.timestamp():
             return False
 
-        # 指定期間内にランが実行されていたかチェック
-        if self.start_date and self.end_date:
-            # ランの期間と指定期間に重なりがあるかチェック
-            if updatedAt.date() < self.start_date or createdAt.date() > self.end_date:
-                return False
-        elif self.start_date:
-            # ランの終了が start_date 以降かチェック
-            if updatedAt.date() < self.start_date:
-                return False
-        elif self.end_date:
-            # ランの開始が end_date 未満かチェック
-            if createdAt.date() >= self.end_date:
-                return False
+        # ランの期間と指定期間に重なりがあるかチェック
+        if updatedAt.date() < self.start_date or createdAt.date() > self.end_date:
+            return False
+        # ランの期間とgpu割り当て期間に重なりがあるかチェック
+        if updatedAt.date() < start or createdAt.date() > end:
+            return False
 
         return True
 
