@@ -80,21 +80,21 @@ class BlankTable:
         # target_date の週の開始日（月曜日）を計算
         target_week_start = self.target_date - dt.timedelta(days=self.target_date.weekday())
         
-        # 前の週の土曜日を計算（これが最後の完全な週の終わり）
+        # 前の週の土曜日を計算
         last_complete_week_end = target_week_start - dt.timedelta(days=2)
         
         self.weekly_table = (
             self.daily_table
             .filter(pl.col("date") <= last_complete_week_end)
             .with_columns(
-                (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("week_start")
+                (pl.col("date") - pl.duration(days=(pl.col("date").dt.weekday()) % 7)).alias("week_start")
             )
             .group_by("company", "week_start")
             .agg(pl.col("assigned_gpu_node").sum())
             .sort("week_start", "company")
             .select(
                 pl.col("company").cast(pl.Utf8),
-                pl.col("week_start").alias("date").cast(pl.Date),
+                pl.col("week_start").cast(pl.Date),
                 pl.col("assigned_gpu_node").cast(pl.Int64),
             )
         )

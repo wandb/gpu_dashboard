@@ -90,18 +90,8 @@ class GPUUsageCalculator:
         
         all_runs_df_without_team = self.add_team()
         
-        # 週次データ用の処理を追加
-        if "week_start" in keys:
-            all_runs_df_without_team = all_runs_df_without_team.with_columns(
-                (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("week_start")
-            )
-            daily_table = self.bt.daily_table.with_columns(
-                (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("week_start")
-            )
-            join_keys = ["company", "week_start"]
-        else:
-            daily_table = self.bt.daily_table
-            join_keys = ["company", "date"]
+        daily_table = self.bt.daily_table
+        join_keys = ["company", "date"]
         
         gpu_hour_df = (
             daily_table.join(
@@ -132,6 +122,10 @@ class GPUUsageCalculator:
         if "year_month" in keys:
             gpu_hour_df = gpu_hour_df.with_columns(
                 pl.col("date").dt.strftime("%Y-%m").alias("year_month")
+            )
+        elif "week_start" in keys:
+            gpu_hour_df = gpu_hour_df.with_columns(
+                (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday() % 7)).alias("week_start")
             )
         
         gpu_hour_df = (
@@ -196,11 +190,7 @@ class GPUUsageCalculator:
         keys = ["company", "week_start"]
 
         gpu_weekly_table = (
-            self.bt.weekly_table.with_columns(
-                pl.col("date").alias("week_start")
-            )
-            .filter(pl.col("week_start") < target_week_start)
-            .join(
+            self.bt.weekly_table.join(
                 all_runs_df_without_team.filter(pl.col("week_start") < target_week_start),
                 on=keys,
                 how="left",
