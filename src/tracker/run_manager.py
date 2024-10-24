@@ -402,72 +402,9 @@ class RunManager:
             )
         )
         return df
-    
-    def __set_gpucount(self, node: EasyDict, team: str):
-        gpu_count = 0  # デフォルト値
 
-        if team in ["nii-geniac", "elyza-geniac", "kotoba-geniac"]:
-            if isinstance(node.config, str):
-                try:
-                    # configが文字列の場合、JSONとしてパースを試みる
-                    config_dict = json.loads(node.config)
-                except json.JSONDecodeError as e:
-                    print(f"Warning: Unable to parse config JSON for {node.name}: {str(e)}")
-                    config_dict = {}
-            elif isinstance(node.config, dict):
-                # configが既に辞書の場合
-                config_dict = node.config
-            else:
-                print(f"Warning: Unexpected config type for {node.name}: {type(node.config)}")
-                config_dict = {}
-
-            if team == "kotoba-geniac":
-                # kotoba-geniacの場合、num_nodes * num_gpusで計算
-                num_nodes = config_dict.get("num_nodes", 0)
-                num_gpus = config_dict.get("num_gpus", 0)
-                
-                # num_nodesとnum_gpusが辞書の場合、'value'キーの値を取得
-                if isinstance(num_nodes, dict):
-                    num_nodes = num_nodes.get('value', 0)
-                if isinstance(num_gpus, dict):
-                    num_gpus = num_gpus.get('value', 0)
-                
-                # 整数に変換
-                try:
-                    num_nodes = int(num_nodes)
-                    num_gpus = int(num_gpus)
-                    gpu_count = num_nodes * num_gpus
-                except (ValueError, TypeError):
-                    print(f"Warning: Unable to calculate gpu_count for {node.name}. num_nodes: {num_nodes}, num_gpus: {num_gpus}")
-                    gpu_count = 0
-            else:
-                # nii-geniacとelyza-geniacの場合、従来のworld_size処理
-                world_size = config_dict.get("world_size")
-                if world_size is not None:
-                    if isinstance(world_size, dict):
-                        gpu_count = world_size.get('value', 0)
-                    elif isinstance(world_size, str):
-                        if world_size.startswith("{") and world_size.endswith("}"):
-                            try:
-                                world_size_dict = ast.literal_eval(world_size)
-                                gpu_count = world_size_dict.get('value', 0)
-                            except (ValueError, SyntaxError):
-                                gpu_count = 0
-                        else:
-                            try:
-                                gpu_count = int(world_size)
-                            except ValueError:
-                                print(f"Warning: Unable to convert world_size to int for {node.name}: {world_size}")
-                                gpu_count = 0
-                    else:
-                        try:
-                            gpu_count = int(world_size)
-                        except (ValueError, TypeError):
-                            print(f"Warning: Unable to convert world_size to int for {node.name}: {world_size}")
-                            gpu_count = 0
-
-        # gpu_countが0の場合（取得できなかった場合）、node.runInfo.gpuCountを使用
-        if gpu_count == 0:
-            gpu_count = node.runInfo.gpuCount if node.runInfo else 0
-
-        return gpu_count
+if __name__ == "__main__":
+    date_range = ["2024-08-14", "2024-10-11"]
+    rm = RunManager(date_range, True)
+    df = rm.fetch_runs()
+    df.write_csv("dev/new_runs_df.csv")
