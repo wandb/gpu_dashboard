@@ -115,10 +115,15 @@ class RunManager:
             if (self.end_date >= team_config.start_date) and (self.start_date <= team_config.end_date):
                 projects = []
                 ignore = team_config.ignore_project_pattern
+                include = team_config.include_project_pattern
                 try:
                     for project in self.api.projects(team_config.team):
-                        if ignore is None or not fnmatch(project.name, ignore):
-                            projects.append(Project(project=project.name))
+                        if include:
+                            if fnmatch(project.name, include):
+                                projects.append(Project(project=project.name))
+                        else:
+                            if not ignore or not fnmatch(project.name, ignore):
+                                projects.append(Project(project=project.name))
                     team_config.projects = projects
                 except Exception as e:
                     print(f"Error fetching projects for {team_config.team}: {str(e)}")

@@ -1,5 +1,4 @@
-testmode: false
-enable_alert: false
+enable_alert: true
 ignore_tags: ["other_gpu", "others_gpu"]  # 増えるようだったらfnmatchで対応する
 wandb_dir: /tmp/wandb
 max_workers: 1
@@ -140,6 +139,7 @@ companies:
         assigned_gpu_node: 42
       - date: "2025-04-24"
         assigned_gpu_node: 0
+    include_project_pattern: "gpu-info"
 
   ### データグリッド ###
   - company: datagrid-geniac
