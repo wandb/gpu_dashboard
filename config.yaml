@@ -14,11 +14,6 @@ dataset:
   project: gpu-dashboard2
   artifact_name: all_runs_data
 
-blacklist:
-  entity: geniac-gpu
-  project: gpu-dashboard2
-  artifact_name: blacklist
-
 companies:
   ### ABEJA ###
   - company: abeja-geniac
