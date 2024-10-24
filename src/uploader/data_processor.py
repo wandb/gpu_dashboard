@@ -39,25 +39,3 @@ class DataProcessor:
         except:
             print("!!! Failed to cast data type !!!")
             return pl.DataFrame()
-
-    @staticmethod
-    def apply_blacklist(df: pl.DataFrame) -> pl.DataFrame:
-        try:
-            blacklist = ArtifactHandler.read_blacklist()
-            ignore_runpath = [b["run_path"] for b in blacklist]
-            
-            new_df = (
-                df.with_columns(
-                    pl.struct("company_name", "project", "run_id")
-                    .map_elements(
-                        lambda x: "/".join((x["company_name"], x["project"], x["run_id"]))
-                    )
-                    .alias("run_path")
-                )
-                .filter(~pl.col("run_path").is_in(ignore_runpath))
-                .drop("run_path")
-            )
-            return new_df
-        except Exception as e:
-            print(f"Error applying blacklist: {e}")
-            return df

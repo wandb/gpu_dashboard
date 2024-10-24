@@ -5,7 +5,6 @@ import pytz
 
 from src.tracker.run_manager import RunManager
 from src.uploader.run_uploader import RunUploader
-from src.blacklist.blacklist_manager import update_blacklist
 from src.utils.config import CONFIG
 from src.calculator.remove_tags import remove_latest_tags
 from src.calculator.gpu_usage_calculator import GPUUsageCalculator
@@ -80,7 +79,7 @@ def main():
     remove_latest_tags()
 
     # テーブルをアップデート
-    calculator = GPUUsageCalculator(processed_df, end_date)
+    calculator = GPUUsageCalculator(processed_df, date_range)
     calculator.update_tables()
 
 if __name__ == "__main__":

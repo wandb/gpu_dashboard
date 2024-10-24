@@ -1,9 +1,7 @@
 import wandb
-import pytz
 import re
 import json
 import time
-import ast
 import gc
 import threading
 from functools import wraps
@@ -11,62 +9,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 import datetime as dt
 import polars as pl
 from fnmatch import fnmatch
-from dataclasses import dataclass, field
 from tqdm import tqdm
 from easydict import EasyDict
 from typing import List
 from wandb_gql import gql
 
+from src.tracker.common import JAPAN_UTC_OFFSET, LOGGED_AT, GQL_QUERY, Run, Project
 from src.tracker.config_parser import parse_configs
+from src.tracker.set_gpucount import set_gpucount
 from src.utils.config import CONFIG
-
-JAPAN_TIMEZONE = pytz.timezone("Asia/Tokyo")
-LOGGED_AT = dt.datetime.now(JAPAN_TIMEZONE).replace(tzinfo=None)
-JAPAN_UTC_OFFSET = 9
-
-GQL_QUERY = """
-query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $cursor: String!) {
-    project(name: $project, entityName: $entity) {
-        name
-        runs(first: $first, after: $cursor) {
-            edges {
-                cursor
-                node {
-                    name
-                    createdAt
-                    updatedAt
-                    heartbeatAt
-                    state
-                    tags
-                    host
-                    runInfo {
-                        gpuCount
-                        gpu
-                    }
-                    config
-                }
-            }
-        }
-    }
-}
-"""
-
-@dataclass
-class Run:
-    run_path: str
-    created_at: dt.datetime
-    updated_at: dt.datetime
-    state: str
-    tags: list[str]
-    host_name: str
-    gpu_name: str
-    gpu_count: int
-    metrics_df: pl.DataFrame = pl.DataFrame()
-
-@dataclass
-class Project:
-    project: str
-    runs: list[Run] = field(default_factory=list)
 
 def timeout(seconds):
     def decorator(func):
@@ -115,17 +66,22 @@ class RunManager:
             if (self.end_date >= team_config.start_date) and (self.start_date <= team_config.end_date):
                 projects = []
                 ignore = team_config.ignore_project_pattern
+                include = team_config.include_project_pattern
                 try:
                     for project in self.api.projects(team_config.team):
-                        if ignore is None or not fnmatch(project.name, ignore):
-                            projects.append(Project(project=project.name))
+                        if include:
+                            if fnmatch(project.name, include):
+                                projects.append(Project(project=project.name))
+                        else:
+                            if not ignore or not fnmatch(project.name, ignore):
+                                projects.append(Project(project=project.name))
                     team_config.projects = projects
                 except Exception as e:
                     print(f"Error fetching projects for {team_config.team}: {str(e)}")
                     team_config.projects = []
             else:
                 team_config.projects = []
-    
+
     def __get_runs(self):
         for team_config in self.team_configs:
             print(f"Get runs for {team_config.team} ...")
@@ -134,6 +90,8 @@ class RunManager:
                 project.runs = self.__query_runs(
                     team=team_config.team,
                     project=project.project,
+                    start=team_config.start_date,
+                    end=team_config.end_date,
                     )
         print(f"\nTotal valid runs across all projects: {self.total_valid_runs}")
     
@@ -167,8 +125,6 @@ class RunManager:
                         new_run_df = self.__create_run_df(run)
                         if not new_run_df.is_empty():
                             combined_df = pl.concat([combined_df, new_run_df])
-                        else:
-                            print(f"Warning: Empty DataFrame created for run {run.run_path}")
                     except Exception as e:
                         print(f"Error processing run {run.run_path}: {str(e)}")
                         print(f"Run details: created_at={run.created_at}, updated_at={run.updated_at}, state={run.state}")
@@ -181,7 +137,7 @@ class RunManager:
             print("Warning: No valid DataFrames were created.")
             return pl.DataFrame()
     
-    def __query_runs(self, team: str, project: str) -> list[Run]:
+    def __query_runs(self, team: str, project: str, start: str, end: str) -> list[Run]:
         cursor = ""
         nodes = []
         total_processed = 0
@@ -201,7 +157,7 @@ class RunManager:
                 )
                 _edges = results["project"]["runs"]["edges"]
                 if not _edges:
-                    return self.__process_nodes(nodes, team, project)
+                    return self.__process_nodes(nodes, team, project, start, end)
                 new_nodes = [EasyDict(e["node"]) for e in _edges]
                 nodes += new_nodes
                 total_processed += len(new_nodes)
@@ -210,17 +166,17 @@ class RunManager:
             except Exception as e:
                 print(f"Failed to execute query for {team}/{project}")
                 print(f"Error details: {str(e)}")
-                return self.__process_nodes(nodes, team, project)
+                return self.__process_nodes(nodes, team, project, start, end)
     
-    def __process_nodes(self, nodes: List[EasyDict], team: str, project: str) -> List[Run]:
+    def __process_nodes(self, nodes: List[EasyDict], team: str, project: str, start: str, end: str) -> List[Run]:
         runs = []
         for node in nodes:
             createdAt = dt.datetime.fromisoformat(node.createdAt.rstrip('Z')) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
             updatedAt = dt.datetime.fromisoformat(node.heartbeatAt.rstrip('Z')) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
 
-            if self.__is_run_valid(node, createdAt, updatedAt) or self.test_mode:
+            if self.__is_run_valid(node, createdAt, updatedAt, start, end) or self.test_mode:
                 run_path = "/".join((team, project, node.name))
-                gpu_count = self.__set_gpucount(node, team)
+                gpu_count = set_gpucount(node, team)
                 run = Run(
                     run_path=run_path,
                     updated_at=updatedAt,
@@ -236,7 +192,7 @@ class RunManager:
         print(f"Total valid runs for {team}/{project}: {len(runs)}")
         return runs
 
-    def __is_run_valid(self, node, createdAt, updatedAt) -> bool:
+    def __is_run_valid(self, node, createdAt, updatedAt, start, end) -> bool:
         # 必要な情報が含まれていないものはスキップ
         if not node.get("runInfo"):
             return False
@@ -251,19 +207,12 @@ class RunManager:
         if createdAt.timestamp() == updatedAt.timestamp():
             return False
 
-        # 指定期間内にランが実行されていたかチェック
-        if self.start_date and self.end_date:
-            # ランの期間と指定期間に重なりがあるかチェック
-            if updatedAt.date() < self.start_date or createdAt.date() > self.end_date:
-                return False
-        elif self.start_date:
-            # ランの終了が start_date 以降かチェック
-            if updatedAt.date() < self.start_date:
-                return False
-        elif self.end_date:
-            # ランの開始が end_date 未満かチェック
-            if createdAt.date() >= self.end_date:
-                return False
+        # ランの期間と指定期間に重なりがあるかチェック
+        if updatedAt.date() < self.start_date or createdAt.date() > self.end_date:
+            return False
+        # ランの期間とgpu割り当て期間に重なりがあるかチェック
+        if updatedAt.date() < start or createdAt.date() > end:
+            return False
 
         return True
 
@@ -453,78 +402,9 @@ class RunManager:
             )
         )
         return df
-    
-    def __set_gpucount(self, node: EasyDict, team: str):
-        gpu_count = 0  # デフォルト値
-
-        if team in ["nii-geniac", "elyza-geniac", "kotoba-geniac"]:
-            if isinstance(node.config, str):
-                try:
-                    # configが文字列の場合、JSONとしてパースを試みる
-                    config_dict = json.loads(node.config)
-                except json.JSONDecodeError as e:
-                    print(f"Warning: Unable to parse config JSON for {node.name}: {str(e)}")
-                    config_dict = {}
-            elif isinstance(node.config, dict):
-                # configが既に辞書の場合
-                config_dict = node.config
-            else:
-                print(f"Warning: Unexpected config type for {node.name}: {type(node.config)}")
-                config_dict = {}
-
-            if team == "kotoba-geniac":
-                # kotoba-geniacの場合、num_nodes * num_gpusで計算
-                num_nodes = config_dict.get("num_nodes", 0)
-                num_gpus = config_dict.get("num_gpus", 0)
-                
-                # num_nodesとnum_gpusが辞書の場合、'value'キーの値を取得
-                if isinstance(num_nodes, dict):
-                    num_nodes = num_nodes.get('value', 0)
-                if isinstance(num_gpus, dict):
-                    num_gpus = num_gpus.get('value', 0)
-                
-                # 整数に変換
-                try:
-                    num_nodes = int(num_nodes)
-                    num_gpus = int(num_gpus)
-                    gpu_count = num_nodes * num_gpus
-                except (ValueError, TypeError):
-                    print(f"Warning: Unable to calculate gpu_count for {node.name}. num_nodes: {num_nodes}, num_gpus: {num_gpus}")
-                    gpu_count = 0
-            else:
-                # nii-geniacとelyza-geniacの場合、従来のworld_size処理
-                world_size = config_dict.get("world_size")
-                if world_size is not None:
-                    if isinstance(world_size, dict):
-                        gpu_count = world_size.get('value', 0)
-                    elif isinstance(world_size, str):
-                        if world_size.startswith("{") and world_size.endswith("}"):
-                            try:
-                                world_size_dict = ast.literal_eval(world_size)
-                                gpu_count = world_size_dict.get('value', 0)
-                            except (ValueError, SyntaxError):
-                                gpu_count = 0
-                        else:
-                            try:
-                                gpu_count = int(world_size)
-                            except ValueError:
-                                print(f"Warning: Unable to convert world_size to int for {node.name}: {world_size}")
-                                gpu_count = 0
-                    else:
-                        try:
-                            gpu_count = int(world_size)
-                        except (ValueError, TypeError):
-                            print(f"Warning: Unable to convert world_size to int for {node.name}: {world_size}")
-                            gpu_count = 0
-
-        # gpu_countが0の場合（取得できなかった場合）、node.runInfo.gpuCountを使用
-        if gpu_count == 0:
-            gpu_count = node.runInfo.gpuCount if node.runInfo else 0
-
-        return gpu_count
 
 if __name__ == "__main__":
-    date_range = ["2024-02-15", "2024-10-11"]
+    date_range = ["2024-08-14", "2024-10-11"]
     rm = RunManager(date_range, True)
     df = rm.fetch_runs()
     df.write_csv("dev/new_runs_df.csv")
