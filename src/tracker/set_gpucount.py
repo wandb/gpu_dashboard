@@ -67,14 +67,15 @@ def set_gpucount(node: EasyDict, team: str) -> int:
         else:
             num_nodes = get_config_value(config_dict, node_key)
         
-        if team in ["abeja-geniac", "alt-geniac"]:
-            num_gpus = 8
+        if team == "karakuri-geniac":
+            gpu_count = num_nodes
+        elif team in ["abeja-geniac", "alt-geniac"]:
+            gpu_count = num_nodes * 8
         elif gpu_key:
             num_gpus = get_config_value(config_dict, gpu_key)
+            gpu_count = num_nodes * num_gpus
         else:
-            num_gpus = 1  # デフォルト値として1を使用
-        
-        gpu_count = num_nodes * num_gpus
+            gpu_count = num_nodes
         
         logger.info(f"Calculated GPU count for {team} ({node.name}): {gpu_count}")
     except Exception as e:
