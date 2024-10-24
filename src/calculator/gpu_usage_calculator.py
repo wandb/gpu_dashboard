@@ -75,7 +75,7 @@ class GPUUsageCalculator:
         self.all_runs_df = all_runs_df
         self.start_date = dt.datetime.strptime(date_range[0], "%Y-%m-%d").date()
         self.end_date = dt.datetime.strptime(date_range[1], "%Y-%m-%d").date()
-        self.bt = BlankTable(target_date=self.end_date)
+        self.bt = BlankTable(self.end_date)
 
     def add_team(self) -> pl.DataFrame:
         if self.all_runs_df.is_empty():
@@ -89,14 +89,28 @@ class GPUUsageCalculator:
             return pl.DataFrame(schema={k: pl.Utf8 for k in keys} | {"total_gpu_hour": pl.Float64, "_total_gpu_hour": pl.Float64})
         
         all_runs_df_without_team = self.add_team()
+        
+        # 週次データ用の処理を追加
+        if "week_start" in keys:
+            all_runs_df_without_team = all_runs_df_without_team.with_columns(
+                (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("week_start")
+            )
+            daily_table = self.bt.daily_table.with_columns(
+                (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("week_start")
+            )
+            join_keys = ["company", "week_start"]
+        else:
+            daily_table = self.bt.daily_table
+            join_keys = ["company", "date"]
+        
         gpu_hour_df = (
-            self.bt.daily_table.join(
+            daily_table.join(
                 all_runs_df_without_team,
-                on=["company", "date"],
+                on=join_keys,
                 how="left",
             )
             .with_columns((pl.col("duration_hour") * pl.col("gpu_count")).alias("gpu_hour"))
-            .group_by("company", "date")
+            .group_by(join_keys)
             .agg(
                 pl.col("gpu_hour").sum().pipe(fillna_round).alias("total_gpu_hour"),
                 pl.col("assigned_gpu_node")
@@ -112,8 +126,16 @@ class GPUUsageCalculator:
                 .alias("total_gpu_hour"),
             )
             .drop("assigned_gpu_hour")
-            .with_columns(pl.col("date").dt.strftime("%Y-%m").alias("year_month"))
-            .group_by(keys)
+        )
+        
+        # 月次データ用の処理を追加
+        if "year_month" in keys:
+            gpu_hour_df = gpu_hour_df.with_columns(
+                pl.col("date").dt.strftime("%Y-%m").alias("year_month")
+            )
+        
+        gpu_hour_df = (
+            gpu_hour_df.group_by(keys)
             .agg(pl.col("total_gpu_hour").sum(), pl.col("_total_gpu_hour").sum())
             .select(*keys, "total_gpu_hour", "_total_gpu_hour")
             .sort(["company"])
@@ -159,36 +181,27 @@ class GPUUsageCalculator:
 
     def agg_weekly(self) -> pl.DataFrame:
         if self.all_runs_df.is_empty():
-            return pl.DataFrame(schema={"企業名": pl.Utf8, "日付": pl.Utf8, "合計GPU使用時間(h)": pl.Float64, "GPU稼働率(%)": pl.Float64, 
+            return pl.DataFrame(schema={"企業名": pl.Utf8, "週開始日": pl.Utf8, "合計GPU使用時間(h)": pl.Float64, "GPU稼働率(%)": pl.Float64, 
                                         "平均GPUパフォーマンス率(%)": pl.Float64, "最大GPUパフォーマンス率(%)": pl.Float64, 
                                         "平均GPUメモリ利用率(%)": pl.Float64, "最大GPUメモリ利用率(%)": pl.Float64, 
                                         "n_runs": pl.Int64, "assigned_gpu_node": pl.Int64, "assigned_gpu_hour": pl.Float64, 
                                         "_total_gpu_hour": pl.Float64, "total_metrics_hour": pl.Float64})
         
-        # 週の開始日と終了日を計算
-        week_end = self.end_date
-        week_start = week_end - dt.timedelta(days=6)
-
-        all_runs_df_without_team = self.add_team()
-        keys = ["company", "date"]
-
-        # 指定された週のデータのみをフィルタリング
-        all_runs_df_without_team = all_runs_df_without_team.filter(
-            (pl.col("date") >= week_start) & (pl.col("date") <= week_end)
+        # end_dateの週の開始日（月曜日）を計算
+        target_week_start = self.end_date - dt.timedelta(days=self.end_date.weekday())
+        
+        all_runs_df_without_team = self.add_team().with_columns(
+            (pl.col("date") - pl.duration(days=pl.col("date").dt.weekday())).alias("week_start")
         )
-
-        # 全てのデータに週の開始日を割り当てる
-        all_runs_df_without_team = all_runs_df_without_team.with_columns(
-            pl.lit(week_start).alias("date")
-        )
+        keys = ["company", "week_start"]
 
         gpu_weekly_table = (
-            self.bt.daily_table.filter(
-                (pl.col("date") >= week_start) & (pl.col("date") <= week_end)
-            ).with_columns(
-                pl.lit(week_start).alias("date")
-            ).join(
-                all_runs_df_without_team,
+            self.bt.weekly_table.with_columns(
+                pl.col("date").alias("week_start")
+            )
+            .filter(pl.col("week_start") < target_week_start)
+            .join(
+                all_runs_df_without_team.filter(pl.col("week_start") < target_week_start),
                 on=keys,
                 how="left",
             )
@@ -203,7 +216,7 @@ class GPUUsageCalculator:
             .with_columns(*METRICS_COLS)
             .select(
                 pl.col("company").alias("企業名"),
-                pl.col("date").dt.strftime("%Y-%m-%d").alias("週開始日"),
+                pl.col("week_start").dt.strftime("%Y-%m-%d").alias("週開始日"),
                 *SELECT_COLS,
             )
             .sort(["週開始日"], descending=True)
@@ -285,7 +298,7 @@ class GPUUsageCalculator:
         with wandb.init(
             entity=CONFIG.dashboard.entity,
             project=CONFIG.dashboard.project,
-            name=f"Tables_{self.target_date}",
+            name=f"Tables_{self.end_date}",
             job_type="update-table",
             tags=["overall", CONFIG.dashboard.tag_for_latest],
         ) as run:
@@ -314,7 +327,7 @@ class GPUUsageCalculator:
             with wandb.init(
                 entity=CONFIG.dashboard.entity,
                 project=CONFIG.dashboard.project,
-                name=f"Tables_{self.target_date}",
+                name=f"Tables_{self.end_date}",
                 job_type="update-table",
                 tags=[company, CONFIG.dashboard.tag_for_latest],
             ) as run:
@@ -358,23 +371,21 @@ class GPUUsageCalculator:
                                         "Total runs": pl.Int64, "master_node_runs": pl.Int64, 
                                         "overlap_runs": pl.Int64, "ignore_runs": pl.Int64})
         
-        start_date = self.target_date - dt.timedelta(days=(self.target_date.weekday() + 7))
+        start_date = self.end_date - dt.timedelta(days=(self.end_date.weekday() + 7))
         end_date = start_date + dt.timedelta(days=7)
         df_filtered = self.all_runs_df.filter(
             (pl.col('date') >= start_date) & (pl.col('date') < end_date)
         )
-        
-        print(f"Analyzing data from {start_date} to {end_date}")
         
         summary = (
             df_filtered
             .with_columns([
                 (pl.col('duration_hour') * pl.col('gpu_count')).alias('weighted_duration'),
                 (pl.col('gpu_count') >= 9).alias('is_master_node'),
-                pl.col('tags').apply(lambda x: any(tag.strip('[]"\'') in CONFIG.ignore_tags for tag in eval(x)), return_dtype=pl.Boolean).alias('has_ignore_tag')
+                pl.col('tags').map_elements(lambda x: any(tag.strip('[]"\'') in CONFIG.ignore_tags for tag in eval(x)), return_dtype=pl.Boolean).alias('has_ignore_tag')
             ])
             # Ensure uniqueness by run_id
-            .groupby(['company_name', 'project', 'run_id'])
+            .group_by(['company_name', 'project', 'run_id'])
             .agg([
                 pl.col('weighted_duration').sum(),
                 pl.col('is_master_node').max(),
@@ -418,3 +429,19 @@ class GPUUsageCalculator:
         gpu_summary_table = self.agg_summary()
         self.update_overall(gpu_overall_table, gpu_monthly_table, gpu_weekly_table)
         self.update_companies(gpu_daily_table, gpu_weekly_table, gpu_summary_table)
+
+if __name__ == "__main__":
+    df = pl.read_csv('dev/processed_df.csv', schema={"date": pl.Date, "company_name": pl.Utf8, "project": pl.Utf8, "run_id": pl.Utf8, "tags": pl.Utf8, 
+                                                     "created_at": pl.Datetime, "updated_at": pl.Datetime, "state": pl.Utf8, "duration_hour": pl.Float64, 
+                                                     "gpu_count": pl.Int64, "average_gpu_utilization": pl.Float64, "average_gpu_memory": pl.Float64, 
+                                                     "max_gpu_utilization": pl.Float64, "max_gpu_memory": pl.Float64, "host_name": pl.Utf8, "logged_at": pl.Datetime})
+    date_range = ["2024-02-01", "2024-03-01"]
+    guc = GPUUsageCalculator(df, date_range)
+    gpu_overall_table = guc.agg_overall()
+    gpu_overall_table.write_csv("dev/gpu_overall_table.csv")
+    gpu_monthly_table = guc.agg_monthly()
+    gpu_monthly_table.write_csv("dev/gpu_monthly_table.csv")
+    gpu_weekly_table = guc.agg_weekly()
+    gpu_weekly_table.write_csv("dev/gpu_weekly_table.csv")
+    gpu_daily_table = guc.agg_daily()
+    gpu_daily_table.write_csv("dev/gpu_daily_table.csv")
