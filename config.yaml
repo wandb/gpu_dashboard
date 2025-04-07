@@ -23,7 +23,7 @@ companies:
     schedule:
       - date: "2024-11-06"
         assigned_gpu_node: 6
-      - date: "2025-11-02"
+      - date: "2025-04-01"
         assigned_gpu_node: 0
 
   ### AIdeaLab ###
