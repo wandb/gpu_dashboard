@@ -75,7 +75,7 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 29
-      - date: "2025-05-01"
+      - date: "2025-04-23"
         assigned_gpu_node: 0
 
   ### NABLAS ###
