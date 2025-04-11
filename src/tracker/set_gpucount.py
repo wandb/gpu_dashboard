@@ -8,7 +8,7 @@ import wandb
 TEAM_CONFIGS = {
     "abeja-geniac": (("NUM_NODES", "trainer"), None),
     "aidealab-geniac": ("gpus", None),
-    "aihub-geniac": (("nnodes" "trainer"), None),
+    "aihub-geniac": (("nnodes", "trainer"), None),
     "aiinside-geniac": ("nnodes", None),
     "alt-geniac": ("NNODES", None),
     "datagrid-geniac": None,
