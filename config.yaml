@@ -2,6 +2,7 @@ enable_alert: true
 ignore_tags: ["other_gpu", "others_gpu"]
 wandb_dir: /tmp
 max_workers: 2
+ignore_deleted_run: false
 
 dashboard:
   entity: geniac-gpu

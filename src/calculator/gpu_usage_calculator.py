@@ -10,7 +10,8 @@ from src.calculator.common import (fillna_round, OVERALL_SCHEMA, MONTHLY_SCHEMA,
 
 class GPUUsageCalculator:
     def __init__(self, all_runs_df: pl.DataFrame, date_range: List):
-        self.all_runs_df = all_runs_df.filter(pl.col("run_exists") != "deleted")
+        if CONFIG.ignore_deleted_run:
+            self.all_runs_df = all_runs_df.filter(pl.col("run_exists") != "deleted")
         self.start_date = dt.datetime.strptime(date_range[0], "%Y-%m-%d").date()
         self.end_date = dt.datetime.strptime(date_range[1], "%Y-%m-%d").date()
         self.bt = BlankTable(self.end_date)
