@@ -12,6 +12,8 @@ class GPUUsageCalculator:
     def __init__(self, all_runs_df: pl.DataFrame, date_range: List):
         if CONFIG.ignore_deleted_run:
             self.all_runs_df = all_runs_df.filter(pl.col("run_exists") != "deleted")
+        else:
+            self.all_runs_df = all_runs_df
         self.start_date = dt.datetime.strptime(date_range[0], "%Y-%m-%d").date()
         self.end_date = dt.datetime.strptime(date_range[1], "%Y-%m-%d").date()
         self.bt = BlankTable(self.end_date)
