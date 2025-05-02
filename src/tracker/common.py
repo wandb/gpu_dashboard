@@ -22,11 +22,14 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
                     state
                     tags
                     host
+                    description
                     runInfo {
                         gpuCount
+                        cpuCount
                         gpu
                     }
                     config
+                    summaryMetrics
                 }
             }
         }
@@ -44,6 +47,7 @@ class Run:
     host_name: str
     gpu_name: str
     gpu_count: int
+    cpu_count: int
     metrics_df: pl.DataFrame = pl.DataFrame()
 
 @dataclass

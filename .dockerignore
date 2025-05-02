@@ -1,4 +1,12 @@
-__pycache__
-.venv
-wandb
-download_tables.ipynb
+__pycache__/
+*.pyc
+.env
+.venv/
+dev/
+wandb/
+wandb_artifacts/
+artifacts/
+
+*.ipynb
+*.md
+image/

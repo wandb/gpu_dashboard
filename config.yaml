@@ -1,7 +1,8 @@
 enable_alert: true
-ignore_tags: ["other_gpu", "others_gpu"]  # 増えるようだったらfnmatchで対応する
-wandb_dir: /tmp/wandb
-max_workers: 1
+ignore_tags: ["other_gpu", "others_gpu"]
+wandb_dir: /tmp
+max_workers: 2
+ignore_deleted_run: false
 
 dashboard:
   entity: geniac-gpu
@@ -13,6 +14,7 @@ dataset:
   entity: geniac-gpu
   project: gpu-dashboard2
   artifact_name: all_runs_data
+  deleted_runs_artifact_name: deleted_runs_data
 
 companies:
   ### ABEJA ###
@@ -22,7 +24,7 @@ companies:
     schedule:
       - date: "2024-11-06"
         assigned_gpu_node: 6
-      - date: "2025-11-02"
+      - date: "2025-04-01"
         assigned_gpu_node: 0
 
   ### AIdeaLab ###
@@ -41,7 +43,7 @@ companies:
       - aihub-geniac
     schedule:
       - date: "2024-10-25"
-        assigned_gpu_node: 5
+        assigned_gpu_node: 2
       - date: "2025-04-24"
         assigned_gpu_node: 0
 
@@ -81,7 +83,9 @@ companies:
       - nablas-geniac
     schedule:
       - date: "2024-10-25"
-        assigned_gpu_node: 4
+        assigned_gpu_node: 5
+      - date: "2025-02-01"
+        assigned_gpu_node: 3
       - date: "2025-05-01"
         assigned_gpu_node: 0
 
@@ -115,16 +119,6 @@ companies:
       - date: "2025-04-24"
         assigned_gpu_node: 0
 
-  ### カラクリ ###
-  - company: karakuri-geniac
-    teams:
-      - karakuri-geniac
-    schedule:
-      - date: "2024-10-25"
-        assigned_gpu_node: 24
-      - date: "2025-04-24"
-        assigned_gpu_node: 0
-
   ### ストックマーク ###
   - company: stockmark-geniac
     teams:
@@ -142,7 +136,11 @@ companies:
       - datagrid-geniac
     schedule:
       - date: "2024-10-25"
-        assigned_gpu_node: 16
+        assigned_gpu_node: 8
+      - date: "2025-02-17"
+        assigned_gpu_node: 38
+      - date: "2025-03-17"
+        assigned_gpu_node: 30
       - date: "2025-05-01"
         assigned_gpu_node: 0
 
@@ -172,16 +170,10 @@ companies:
       - ricoh-geniac
     schedule:
       - date: "2024-10-25"
-        assigned_gpu_node: 8
-      - date: "2025-04-24"
-        assigned_gpu_node: 0
-
-  ### ユビタス ###
-  - company: ubitus-geniac
-    teams:
-      - ubitus-geniac
-    schedule:
-      - date: "2024-10-25"
-        assigned_gpu_node: 32
+        assigned_gpu_node: 5
+      - date: "2025-03-01"
+        assigned_gpu_node: 9
+      - date: "2025-04-01"
+        assigned_gpu_node: 5
       - date: "2025-04-24"
         assigned_gpu_node: 0

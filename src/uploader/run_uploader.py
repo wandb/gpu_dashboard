@@ -1,5 +1,4 @@
 import datetime as dt
-import polars as pl
 from typing import List
 from .artifact_handler import ArtifactHandler
 from .data_processor import DataProcessor

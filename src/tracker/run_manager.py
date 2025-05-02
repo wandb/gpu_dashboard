@@ -50,16 +50,28 @@ class RunManager:
         self.team_configs = parse_configs(CONFIG)
         self.start_date = dt.datetime.strptime(date_range[0], "%Y-%m-%d").date()
         self.end_date = dt.datetime.strptime(date_range[1], "%Y-%m-%d").date()
-        self.api = wandb.Api(timeout=60)
+        self.api = wandb.Api(timeout=30)
         self.test_mode = test_mode
         self.total_valid_runs = 0
     
     def fetch_runs(self):
-        self.__get_projects()
-        self.__get_runs()
-        self.__get_metrics()
-        combined_df = self.__combined_run_df()
-        return combined_df
+        if self.test_mode == False:
+            with wandb.init(
+                entity=CONFIG.dashboard.entity,
+                project=CONFIG.dashboard.project,
+                name=f"Fetch Runs",
+            ) as run:
+                self.__get_projects()
+                self.__get_runs()
+                self.__get_metrics()
+                combined_df = self.__combined_run_df()
+                return combined_df
+        else:
+            self.__get_projects()
+            self.__get_runs()
+            self.__get_metrics()
+            combined_df = self.__combined_run_df()
+            return combined_df
     
     def __get_projects(self):
         for team_config in self.team_configs:
@@ -94,48 +106,6 @@ class RunManager:
                     end=team_config.end_date,
                     )
         print(f"\nTotal valid runs across all projects: {self.total_valid_runs}")
-    
-    def __get_metrics(self):
-        print("Get metrics for each run ...")
-        for team_config in self.team_configs:
-            print(f"Processing team: {team_config.team}")
-            for project in tqdm(team_config.projects, desc="Projects"):
-                print(f"Processing project: {project.project}")
-                if project.runs:
-                    self.__process_project_runs(project)
-                else:
-                    print(f"Skipping project {project.project} as it has no runs.")
-                gc.collect()
-    
-    def __combined_run_df(self):
-        print("Create combined run DataFrame ...")
-        combined_df = pl.DataFrame()
-        for team_config in tqdm(self.team_configs, desc="Processing teams"):
-            print(f"  Team: {team_config.team}")
-            if not team_config.projects:
-                print(f"  Skipping team {team_config.team} as it has no projects.")
-                continue
-            for project in team_config.projects:
-                if not hasattr(project, 'runs') or not project.runs:
-                    print(f"  Skipping project {project.project} as it has no runs.")
-                    continue
-                print(f"  Processing {len(project.runs)} runs for project {project.project}")
-                for run in project.runs:
-                    try:
-                        new_run_df = self.__create_run_df(run)
-                        if not new_run_df.is_empty():
-                            combined_df = pl.concat([combined_df, new_run_df])
-                    except Exception as e:
-                        print(f"Error processing run {run.run_path}: {str(e)}")
-                        print(f"Run details: created_at={run.created_at}, updated_at={run.updated_at}, state={run.state}")
-                gc.collect()
-        
-        if not combined_df.is_empty():
-            print(f"Total runs processed: {len(combined_df)}")
-            return combined_df
-        else:
-            print("Warning: No valid DataFrames were created.")
-            return pl.DataFrame()
     
     def __query_runs(self, team: str, project: str, start: str, end: str) -> list[Run]:
         cursor = ""
@@ -174,9 +144,10 @@ class RunManager:
             createdAt = dt.datetime.fromisoformat(node.createdAt.rstrip('Z')) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
             updatedAt = dt.datetime.fromisoformat(node.heartbeatAt.rstrip('Z')) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
 
-            if self.__is_run_valid(node, createdAt, updatedAt, start, end) or self.test_mode:
+            if self.__is_run_valid(node, createdAt, updatedAt, start, end, team):
                 run_path = "/".join((team, project, node.name))
-                gpu_count = set_gpucount(node, team)
+                gpu_count = set_gpucount(node, team, run_path, createdAt, updatedAt)
+                cpu_count = node.runInfo.cpuCount if node.runInfo else 0
                 run = Run(
                     run_path=run_path,
                     updated_at=updatedAt,
@@ -186,36 +157,41 @@ class RunManager:
                     host_name=node.host,
                     gpu_name=node.runInfo.gpu if node.runInfo else None,
                     gpu_count=gpu_count,
+                    cpu_count=cpu_count,
                 )
                 runs.append(run)
         self.total_valid_runs += len(runs)
         print(f"Total valid runs for {team}/{project}: {len(runs)}")
         return runs
 
-    def __is_run_valid(self, node, createdAt, updatedAt, start, end) -> bool:
+    def __is_run_valid(self, node, createdAt, updatedAt, start, end, team) -> bool:
         # 必要な情報が含まれていないものはスキップ
         if not node.get("runInfo"):
             return False
-        if not node.get("runInfo").get("gpu"):
+        if not node.get("runInfo").get("gpu") and not team == "datagrid-geniac":
             return False
         
-        # 特定のtagをスキップ
-        if not set(CONFIG.ignore_tags).isdisjoint([t.lower() for t in node.tags]):
-            return False
-
-        # 実行時間が短いものはスキップ
-        if createdAt.timestamp() == updatedAt.timestamp():
-            return False
-
         # ランの期間と指定期間に重なりがあるかチェック
         if updatedAt.date() < self.start_date or createdAt.date() > self.end_date:
             return False
         # ランの期間とgpu割り当て期間に重なりがあるかチェック
         if updatedAt.date() < start or createdAt.date() > end:
             return False
-
+        
         return True
 
+    def __get_metrics(self):
+        print("Get metrics for each run ...")
+        for team_config in self.team_configs:
+            print(f"Processing team: {team_config.team}")
+            for project in tqdm(team_config.projects, desc="Projects"):
+                print(f"Processing project: {project.project}")
+                if project.runs:
+                    self.__process_project_runs(project)
+                else:
+                    print(f"Skipping project {project.project} as it has no runs.")
+                gc.collect()
+    
     def __process_project_runs(self, project):
         max_workers = min(CONFIG.max_workers, len(project.runs))
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -232,7 +208,7 @@ class RunManager:
                 completed += 1
                 gc.collect()
         
-        print(f"Completed processing {len(project.runs)} runs for {project.project}")
+        print(f"Completed processing {completed} runs for {project.project}")
     
     def __create_metrics_df_with_retry(self, run_path: str, max_retries=3, initial_timeout=5):
         for attempt in range(max_retries):
@@ -270,14 +246,11 @@ class RunManager:
                 return pl.DataFrame()
 
             metrics_df_small_width = self.__extract_relevant_columns(metrics_df_with_datetime)
-            del metrics_df_with_datetime  # 不要になったDataFrameを削除
 
             if metrics_df_small_width.width == 2:
                 return pl.DataFrame()
 
             daily_metrics_df = self.__process_daily_metrics(metrics_df_small_width, metrics_df)
-            del metrics_df_small_width  # 不要になったDataFrameを削除
-            del metrics_df  # 元のmetrics_dfも削除
 
             return daily_metrics_df
 
@@ -343,6 +316,36 @@ class RunManager:
             )
         )
     
+    def __combined_run_df(self):
+        print("Create combined run DataFrame ...")
+        combined_df = pl.DataFrame()
+        for team_config in tqdm(self.team_configs, desc="Processing teams"):
+            print(f"  Team: {team_config.team}")
+            if not team_config.projects:
+                print(f"  Skipping team {team_config.team} as it has no projects.")
+                continue
+            for project in team_config.projects:
+                if not hasattr(project, 'runs') or not project.runs:
+                    print(f"  Skipping project {project.project} as it has no runs.")
+                    continue
+                print(f"  Processing {len(project.runs)} runs for project {project.project}")
+                for run in project.runs:
+                    try:
+                        new_run_df = self.__create_run_df(run)
+                        if not new_run_df.is_empty():
+                            combined_df = pl.concat([combined_df, new_run_df])
+                    except Exception as e:
+                        print(f"Error processing run {run.run_path}: {str(e)}")
+                        print(f"Run details: created_at={run.created_at}, updated_at={run.updated_at}, state={run.state}")
+                gc.collect()
+        
+        if not combined_df.is_empty():
+            print(f"Total runs processed: {len(combined_df)}")
+            return combined_df
+        else:
+            print("Warning: No valid DataFrames were created.")
+            return pl.DataFrame()
+    
     def __create_run_df(self, run: Run) -> pl.DataFrame:
         duration_df = self.__calculate_daily_duration(run.created_at, run.updated_at)
         
@@ -367,13 +370,14 @@ class RunManager:
             pl.lit(run.updated_at).cast(pl.Datetime).alias("updated_at"),
             pl.lit(run.state).cast(pl.String).alias("state"),
             pl.lit(run.gpu_count).cast(pl.Int64).alias("gpu_count"),
+            pl.lit(run.cpu_count).cast(pl.Int64).alias("cpu_count"),
             pl.lit(run.host_name).cast(pl.String).alias("host_name"),
             pl.lit(LOGGED_AT).cast(pl.Datetime).alias("logged_at"),
+            pl.lit("exists").alias("run_exists"), 
         ]).select([
-            "date", "company_name", "project", "run_id", "tags",
-            "created_at", "updated_at", "state", "duration_hour", "gpu_count",
-            "average_gpu_utilization", "average_gpu_memory",
-            "max_gpu_utilization", "max_gpu_memory", "host_name", "logged_at"
+            "date", "company_name", "project", "run_id", "tags", "created_at", "updated_at",
+            "state", "duration_hour", "gpu_count", "cpu_count", "average_gpu_utilization",
+            "average_gpu_memory", "max_gpu_utilization", "max_gpu_memory", "host_name", "logged_at", "run_exists"
         ])
 
     def __calculate_daily_duration(self, start: dt.datetime, end: dt.datetime) -> pl.DataFrame:
@@ -404,7 +408,7 @@ class RunManager:
         return df
 
 if __name__ == "__main__":
-    date_range = ["2024-08-14", "2024-10-11"]
+    date_range = ["2024-10-25", "2024-10-25"]
     rm = RunManager(date_range, True)
     df = rm.fetch_runs()
     df.write_csv("dev/new_runs_df.csv")

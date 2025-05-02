@@ -1,10 +1,9 @@
 import wandb
-import json
 import pandas as pd
 import polars as pl
 from pathlib import Path
 from typing import List
-from ..utils.config import CONFIG
+from src.utils.config import CONFIG
 
 class ArtifactHandler:
     @staticmethod

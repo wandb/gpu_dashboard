@@ -78,10 +78,10 @@ class BlankTable:
     def __weekly_table(self) -> pl.DataFrame:
         """日次テーブルから週次テーブルを作成"""
         # target_date の週の開始日（月曜日）を計算
-        target_week_start = self.target_date - dt.timedelta(days=self.target_date.weekday())
+        target_week_start = self.target_date - dt.timedelta(days=(self.target_date.weekday() + 1) % 7)
         
         # 前の週の土曜日を計算
-        last_complete_week_end = target_week_start - dt.timedelta(days=2)
+        last_complete_week_end = target_week_start + dt.timedelta(days=6)
         
         self.weekly_table = (
             self.daily_table
