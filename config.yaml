@@ -44,8 +44,6 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 2
-      - date: "2025-01-31"
-        assigned_gpu_node: 8
       - date: "2025-04-24"
         assigned_gpu_node: 0
 
