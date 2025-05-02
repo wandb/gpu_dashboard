@@ -2,6 +2,7 @@ enable_alert: true
 ignore_tags: ["other_gpu", "others_gpu"]
 wandb_dir: /tmp
 max_workers: 2
+ignore_deleted_run: false
 
 dashboard:
   entity: geniac-gpu
@@ -23,7 +24,7 @@ companies:
     schedule:
       - date: "2024-11-06"
         assigned_gpu_node: 6
-      - date: "2025-11-02"
+      - date: "2025-04-01"
         assigned_gpu_node: 0
 
   ### AIdeaLab ###
@@ -43,8 +44,6 @@ companies:
     schedule:
       - date: "2024-10-25"
         assigned_gpu_node: 2
-      - date: "2025-01-31"
-        assigned_gpu_node: 8
       - date: "2025-04-24"
         assigned_gpu_node: 0
 
