@@ -2,17 +2,14 @@ name: Build and Push Main Docker Image
 
 on:
   push:
-    branches: [ main, master, 'feature/**' ]
-    paths:
-      - 'gpu_dashboard/**'
-      - '!gpu_dashboard/src/alart/**'
-      - '.github/workflows/docker-build-push-main.yml'
+    branches:
+      - main
+      - master
+      - 'feature/**'
   pull_request:
-    branches: [ main, master ]
-    paths:
-      - 'gpu_dashboard/**'
-      - '!gpu_dashboard/src/alart/**'
-      - '.github/workflows/docker-build-push-main.yml'
+    branches:
+      - main
+      - master
   workflow_dispatch:
     inputs:
       force_build:
@@ -50,7 +47,6 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        cd gpu_dashboard
         docker build -f Dockerfile.main -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
