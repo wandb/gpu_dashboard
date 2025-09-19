@@ -1,20 +1,20 @@
-name: Build and Push Check Dashboard Docker Image
+name: Build and Push Run Existence Check Docker Image
 
 on:
   push:
     branches: [ main, master ]
     paths:
-      - 'gpu_dashboard/src/alart/**'
+      - 'gpu_dashboard/src/calculator/remove_tags.py'
       - 'gpu_dashboard/src/utils/**'
-      - 'gpu_dashboard/Dockerfile.check_dashboard'
+      - 'gpu_dashboard/Dockerfile.main'  # Reusing main Dockerfile for now
       - 'gpu_dashboard/requirements.txt'
-      - '.github/workflows/docker-build-push-checkDashboard.yml'
+      - '.github/workflows/docker-build-push-runExistenceCheck.yml'
   pull_request:
     branches: [ main, master ]
     paths:
-      - 'gpu_dashboard/src/alart/**'
+      - 'gpu_dashboard/src/calculator/remove_tags.py'
       - 'gpu_dashboard/src/utils/**'
-      - 'gpu_dashboard/Dockerfile.check_dashboard'
+      - 'gpu_dashboard/Dockerfile.main'
       - 'gpu_dashboard/requirements.txt'
   workflow_dispatch:
     inputs:
@@ -26,7 +26,7 @@ on:
 
 env:
   AWS_REGION: us-east-2
-  ECR_REPOSITORY: gpu-dashboard-check
+  ECR_REPOSITORY: gpu-dashboard-run-check
   IMAGE_TAG: latest
 
 jobs:
@@ -54,7 +54,7 @@ jobs:
         IMAGE_TAG: ${{ github.sha }}
       run: |
         cd gpu_dashboard
-        docker build -f Dockerfile.check_dashboard -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker build -f Dockerfile.main -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
