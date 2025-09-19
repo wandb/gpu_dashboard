@@ -2,7 +2,7 @@ name: Build and Push Main Docker Image
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, 'feature/**' ]
     paths:
       - 'gpu_dashboard/**'
       - '!gpu_dashboard/src/alart/**'
@@ -12,6 +12,7 @@ on:
     paths:
       - 'gpu_dashboard/**'
       - '!gpu_dashboard/src/alart/**'
+      - '.github/workflows/docker-build-push-main.yml'
   workflow_dispatch:
     inputs:
       force_build:
