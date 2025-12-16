@@ -1,0 +1,70 @@
+name: Build and Push Check Dashboard Docker Image
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'gpu_dashboard/src/alart/**'
+      - 'gpu_dashboard/src/utils/**'
+      - 'gpu_dashboard/Dockerfile.check_dashboard'
+      - 'gpu_dashboard/requirements.txt'
+      - '.github/workflows/docker-build-push-checkDashboard.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'gpu_dashboard/src/alart/**'
+      - 'gpu_dashboard/src/utils/**'
+      - 'gpu_dashboard/Dockerfile.check_dashboard'
+      - 'gpu_dashboard/requirements.txt'
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build even without changes'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  AWS_REGION: us-east-2
+  ECR_REPOSITORY: gpu-dashboard-check
+  IMAGE_TAG: latest
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        cd gpu_dashboard
+        docker build -f Dockerfile.check_dashboard -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+        echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+    - name: Output image URI
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        echo "::notice::Image URI: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+        echo "::notice::Latest Image URI: $ECR_REGISTRY/$ECR_REPOSITORY:latest"
