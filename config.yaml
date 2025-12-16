@@ -194,6 +194,8 @@ companies:
     schedule:
       - date: "2025-08-12"
         assigned_gpu_node: 1
+      - date: "2024-12-05"        # Added for 2024-12-05 on Dec. 16th
+        assigned_gpu_node: 5        
       - date: "2026-02-07"
         assigned_gpu_node: 0
 
