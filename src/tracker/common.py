@@ -16,6 +16,9 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
                 cursor
                 node {
                     name
+                    user {
+                        username
+                    }
                     createdAt
                     updatedAt
                     heartbeatAt
@@ -37,6 +40,7 @@ query GetGpuInfoForProject($project: String!, $entity: String!, $first: Int!, $c
 @dataclass
 class Run:
     run_path: str
+    user_name: str
     created_at: dt.datetime
     updated_at: dt.datetime
     state: str

@@ -13,6 +13,8 @@ class TeamConfig:
     end_date: dt.date
     ignore_project_pattern: Optional[str] = None
     include_project_pattern: Optional[str] = None
+    ignore_users: Optional[List[str]] = None
+    include_users: Optional[List[str]] = None
     projects: Optional[List] = None
 
 def parse_configs(config) -> dict:
@@ -26,6 +28,8 @@ def parse_configs(config) -> dict:
                 end_date=__get_end_date(company.schedule),
                 ignore_project_pattern=company.get("ignore_project_pattern", None),
                 include_project_pattern=company.get("include_project_pattern", None),
+                ignore_users=company.get("ignore_users", None),
+                include_users=company.get("include_users", None),
             )
             team_configs.append(team_config)
     return team_configs

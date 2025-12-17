@@ -299,10 +299,22 @@ companies:
       - date: "2026-02-07"
         assigned_gpu_node: 0
 
-  ### Premedi ###
+  ### Premedi (Company) ###
   - company: premedi-geniac
     teams:
       - premedi-geniac
+    ignore_users: ["kazumkob"]
+    schedule:
+      - date: "2025-08-28"
+        assigned_gpu_node: 1
+      - date: "2026-02-27"
+        assigned_gpu_node: 0
+
+  ### NCC (Individual) ###
+  - company: ncc-geniac
+    teams:
+      - premedi-geniac
+    include_users: ["kazumkob"]
     schedule:
       - date: "2025-08-28"
         assigned_gpu_node: 1

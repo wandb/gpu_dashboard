@@ -119,8 +119,18 @@ class RunManager:
                 if not hasattr(project, 'runs') or not project.runs:
                     print(f"  Skipping project {project.project} as it has no runs.")
                     continue
-                print(f"  Processing {len(project.runs)} runs for project {project.project}")
+                
+                # Filter runs by user
+                filtered_runs = []
                 for run in project.runs:
+                    if team_config.ignore_users and run.user_name in team_config.ignore_users:
+                        continue
+                    if team_config.include_users and run.user_name not in team_config.include_users:
+                        continue
+                    filtered_runs.append(run)
+
+                print(f"  Processing {len(filtered_runs)} runs (out of {len(project.runs)}) for project {project.project}")
+                for run in filtered_runs:
                     try:
                         new_run_df = self.__create_run_df(run)
                         if not new_run_df.is_empty():
@@ -177,8 +187,10 @@ class RunManager:
             if self.__is_run_valid(node, createdAt, updatedAt, start, end) or self.test_mode:
                 run_path = "/".join((team, project, node.name))
                 gpu_count = set_gpucount(node, team)
+                user_name = node.user.username if node.get("user") else "unknown"
                 run = Run(
                     run_path=run_path,
+                    user_name=user_name,
                     updated_at=updatedAt,
                     created_at=createdAt,
                     state=node.state,
@@ -362,6 +374,7 @@ class RunManager:
             pl.lit(company_name).alias("company_name"),
             pl.lit(project).alias("project"),
             pl.lit(run_id).alias("run_id"),
+            pl.lit(run.user_name).alias("user_name"),
             pl.lit(json.dumps(run.tags)).alias("tags"),
             pl.lit(run.created_at).cast(pl.Datetime).alias("created_at"),
             pl.lit(run.updated_at).cast(pl.Datetime).alias("updated_at"),
@@ -370,7 +383,7 @@ class RunManager:
             pl.lit(run.host_name).cast(pl.String).alias("host_name"),
             pl.lit(LOGGED_AT).cast(pl.Datetime).alias("logged_at"),
         ]).select([
-            "date", "company_name", "project", "run_id", "tags",
+            "date", "company_name", "project", "run_id", "user_name", "tags",
             "created_at", "updated_at", "state", "duration_hour", "gpu_count",
             "average_gpu_utilization", "average_gpu_memory",
             "max_gpu_utilization", "max_gpu_memory", "host_name", "logged_at"
