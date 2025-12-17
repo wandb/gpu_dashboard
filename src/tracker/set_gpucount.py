@@ -31,7 +31,7 @@ TEAM_CONFIGS = {
     "nri-geniac": None,
     "nishika-org": None,
     "sdio-geniac": None,
-    "airion-geniac": ("world_size", None),
+    "airion-geniac": None,
     "nexascience-geniac": None,
     "degas-geniac": None,
     "premedi-geniac": None,
