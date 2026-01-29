@@ -80,9 +80,9 @@ class GPUUsageCalculator:
     def add_team(self) -> pl.DataFrame:
         if self.all_runs_df.is_empty():
             return pl.DataFrame(schema=self.bt.team_table.schema)
-        return self.all_runs_df.join(
-            self.bt.team_table, left_on="company_name", right_on="team", how="left"
-        ).drop("company_name", "assigned_gpu_node")
+        # Simply rename company_name to company - no join needed
+        # The company_name already comes from config correctly
+        return self.all_runs_df.rename({"company_name": "company"})
 
     def agg_gpu_hour(self, keys: list[str]) -> pl.DataFrame:
         if self.all_runs_df.is_empty():

@@ -5,6 +5,12 @@ import pytz
 from easydict import EasyDict
 import wandb
 import yaml
+import pandas as pd
+import os
+import glob
+import tempfile
+import shutil
+import json
 
 @dataclass
 class CompanySchedule:
@@ -39,6 +45,9 @@ class DashboardChecker:
         else:
             runs = self.get_runs()
             errors = self.check_runs(companies, runs)
+            # 追加: データ品質チェック (3日間連続0/欠損)
+            quality_errors = self.check_data_quality(companies)
+            errors.extend(quality_errors)
 
         self.send_alert(errors)
 
@@ -106,6 +115,77 @@ class DashboardChecker:
             errors.append(UpdateError(title="Error of number of latest runs", text=""))
         if companies != set(companies_found):
             errors.append(UpdateError(title="Error of companies", text=str(companies_found)))
+
+    def check_data_quality(self, companies: Set[str]) -> List[UpdateError]:
+        """過去3日間のデータ品質（欠損や稼働率0）をチェックする"""
+        errors = []
+        try:
+            # Artifactの取得
+            entity = self.config.data.dataset.entity
+            project = self.config.data.dataset.project
+            artifact_name = self.config.data.dataset.artifact_name
+            artifact_path = f"{entity}/{project}/{artifact_name}:latest"
+            
+            print(f"Checking data quality from artifact: {artifact_path}")
+            artifact = self.api.artifact(artifact_path)
+            
+            # TableをDataFrameとして取得
+            # all_runs_dataテーブルを取得しようと試みる
+            try:
+                table = artifact.get("all_runs_data")
+            except KeyError:
+                # キーが見つからない場合は、manifestから推測するか、デフォルトのファイルを探す
+                # ここでは簡略化のため、エラーとして記録せずスキップ（またはログ出力）
+                print("Warning: 'all_runs_data' table not found in artifact.")
+                return []
+
+            if table is None:
+                return []
+
+            df = table.get_dataframe()
+            
+            # 日付カラムの変換
+            if 'date' in df.columns:
+                # dateカラムが文字列の場合、datetime.dateに変換
+                df['date'] = pd.to_datetime(df['date']).dt.date
+            
+            # チェック対象期間: 今日を含む過去3日間
+            target_dates = [self.config.TARGET_DATE - dt.timedelta(days=i) for i in range(3)]
+            print(f"Checking data for dates: {target_dates}")
+            
+            for company in companies:
+                if company == 'overall': continue
+                
+                # 過去3日間のデータをフィルタ
+                recent_df = df[
+                    (df['company_name'] == company) & 
+                    (df['date'].isin(target_dates))
+                ]
+                
+                if recent_df.empty:
+                    # 3日間データなし
+                    errors.append(UpdateError(
+                        title=f"Missing Data: {company}", 
+                        text=f"No data found in the last 3 days ({target_dates[-1]} - {target_dates[0]})."
+                    ))
+                    continue
+                
+                # 稼働率0チェック
+                if 'average_gpu_utilization' in recent_df.columns:
+                    # 数値に変換 (エラーはNaN -> 0)
+                    util = pd.to_numeric(recent_df['average_gpu_utilization'], errors='coerce').fillna(0)
+                    if util.sum() == 0:
+                        # 3日間データはあるが、稼働率がずっと0
+                        errors.append(UpdateError(
+                            title=f"Zero Utilization: {company}",
+                            text=f"Runs exist but 0% GPU utilization for the last 3 days."
+                        ))
+
+        except Exception as e:
+            print(f"Warning: Failed to check data quality: {e}")
+            # エラーを握りつぶして、アラート処理自体は止めない
+            
+        return errors
 
     def send_alert(self, errors: List[UpdateError]) -> None:
         """wandbでアラートを送信する"""

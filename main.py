@@ -71,8 +71,16 @@ def main():
     run_manager = RunManager(date_range)
     new_runs_df = run_manager.fetch_runs()
 
+    # Get list of companies being processed
+    # For daily runs in production, we want INCREMENTAL updates (keep old history).
+    # So we should NOT trigger refresh (which deletes old data).
+    companies_to_refresh = []
+    
+    print(f"Companies to refresh (old data will be excluded): {companies_to_refresh}")
+    print(f"All companies will be updated incrementally.")
+
     # RunUploaderを使用してデータを処理しアップロード
-    uploader = RunUploader(new_runs_df, date_range)
+    uploader = RunUploader(new_runs_df, date_range, companies_to_refresh)
     processed_df = uploader.process_and_upload_runs()
 
     # latestタグを削除

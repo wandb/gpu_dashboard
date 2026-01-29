@@ -1,0 +1,15 @@
+FROM --platform=linux/amd64 python:3.10
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY config_ncc.yaml .
+COPY main.py .
+COPY src ./src
+
+# Use config_ncc.yaml for NCC + Premedi only
+ENV CONFIG_FILE=config_ncc.yaml
+
+CMD ["python", "main.py"]

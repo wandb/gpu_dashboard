@@ -9,6 +9,7 @@ CONFIG_PATH = "config.yaml"
 @dataclass
 class TeamConfig:
     team: str
+    company_name: str  # The company name from config (used for dashboard)
     start_date: dt.date
     end_date: dt.date
     ignore_project_pattern: Optional[str] = None
@@ -24,6 +25,7 @@ def parse_configs(config) -> dict:
         for team in company.teams:
             team_config = TeamConfig(
                 team=team,
+                company_name=company.company,  # Use config's company name for dashboard
                 start_date=__get_start_date(company.schedule),
                 end_date=__get_end_date(company.schedule),
                 ignore_project_pattern=company.get("ignore_project_pattern", None),

@@ -70,10 +70,23 @@ class RunManager:
                 try:
                     for project in self.api.projects(team_config.team):
                         if include:
-                            if fnmatch(project.name, include):
+                            # Support list of patterns
+                            if isinstance(include, list):
+                                if any(fnmatch(project.name, p) for p in include):
+                                    projects.append(Project(project=project.name))
+                            elif fnmatch(project.name, include):
                                 projects.append(Project(project=project.name))
                         else:
-                            if not ignore or not fnmatch(project.name, ignore):
+                            # Support list of patterns for ignore
+                            if ignore:
+                                is_ignored = False
+                                if isinstance(ignore, list):
+                                    is_ignored = any(fnmatch(project.name, p) for p in ignore)
+                                else:
+                                    is_ignored = fnmatch(project.name, ignore)
+                                if not is_ignored:
+                                    projects.append(Project(project=project.name))
+                            else:
                                 projects.append(Project(project=project.name))
                     team_config.projects = projects
                 except Exception as e:
@@ -119,20 +132,17 @@ class RunManager:
                 if not hasattr(project, 'runs') or not project.runs:
                     print(f"  Skipping project {project.project} as it has no runs.")
                     continue
-                
-                # Filter runs by user
-                filtered_runs = []
+                print(f"  Processing {len(project.runs)} runs for project {project.project}")
                 for run in project.runs:
-                    if team_config.ignore_users and run.user_name in team_config.ignore_users:
-                        continue
-                    if team_config.include_users and run.user_name not in team_config.include_users:
-                        continue
-                    filtered_runs.append(run)
-
-                print(f"  Processing {len(filtered_runs)} runs (out of {len(project.runs)}) for project {project.project}")
-                for run in filtered_runs:
+                    # User filtering
+                    if team_config.include_users:
+                        if run.user_name not in team_config.include_users:
+                            continue
+                    if team_config.ignore_users:
+                        if run.user_name in team_config.ignore_users:
+                            continue
                     try:
-                        new_run_df = self.__create_run_df(run)
+                        new_run_df = self.__create_run_df(run, team_config.company_name)
                         if not new_run_df.is_empty():
                             combined_df = pl.concat([combined_df, new_run_df])
                     except Exception as e:
@@ -302,7 +312,7 @@ class RunManager:
             metrics_df
             .with_columns(
                 pl.col("_timestamp")
-                .map_elements(lambda x: dt.datetime.fromtimestamp(x))
+                .map_elements(lambda x: dt.datetime.fromtimestamp(x), return_dtype=pl.Datetime)
                 .alias("datetime")
             )
             .filter(
@@ -325,37 +335,72 @@ class RunManager:
         gpu_ptn = "^system\.gpu\.\d+\.gpu$"
         memory_ptn = "^system\.gpu\.\d+\.memory$"
         
-        return (
+        # Get value_vars
+        gpu_cols = [c for c in original_df.columns if re.findall(gpu_ptn, c)]
+        memory_cols = [c for c in original_df.columns if re.findall(memory_ptn, c)]
+        
+        # If no GPU/memory columns, return empty DataFrame
+        if not gpu_cols and not memory_cols:
+            return pl.DataFrame()
+        
+        result = (
             df
             .with_columns(pl.col("datetime").dt.date().alias("date"))
             .melt(
                 id_vars=["date", "datetime", "_timestamp"],
-                value_vars=[c for c in original_df.columns if re.findall(gpu_ptn, c)] +
-                           [c for c in original_df.columns if re.findall(memory_ptn, c)],
+                value_vars=gpu_cols + memory_cols,
                 variable_name="gpu",
                 value_name="value",
             )
-            .with_columns(pl.col("gpu").map_elements(lambda x: x.split(".")[-1]))
+            .with_columns(pl.col("gpu").map_elements(lambda x: x.split(".")[-1], return_dtype=pl.Utf8))
             .group_by(["date", "gpu"])
             .agg(
                 pl.col("value").mean().alias("average"),
                 pl.col("value").max().alias("max"),
                 pl.col("_timestamp")
-                .map_elements(lambda x: (max(x) - min(x)) / 60**2)
+                .map_elements(
+                    lambda x: (max(x) - min(x)) / 3600 if hasattr(x, '__iter__') else 0.0,
+                    return_dtype=pl.Float64
+                )
                 .alias("metrics_hours"),
             )
             .pivot(index="date", columns="gpu", values=["average", "max"])
-            .rename({f"{prefix}_gpu_gpu": f"{prefix}_gpu_utilization" for prefix in ("average", "max")})
-            .select(
-                pl.col("date").cast(pl.Date),
-                pl.col("average_gpu_utilization").cast(pl.Float64),
-                pl.col("max_gpu_utilization").cast(pl.Float64),
-                pl.col("average_gpu_memory").cast(pl.Float64),
-                pl.col("max_gpu_memory").cast(pl.Float64),
-            )
+        )
+        
+        # Safely rename columns if they exist (FIX: use gpu_gpu not gpu)
+        rename_map = {}
+        if "average_gpu_gpu" in result.columns:
+            rename_map["average_gpu_gpu"] = "average_gpu_utilization"
+        if "max_gpu_gpu" in result.columns:
+            rename_map["max_gpu_gpu"] = "max_gpu_utilization"
+        
+        if rename_map:
+            result = result.rename(rename_map)
+        
+        # Handle gpu_memory columns (some WandB data has gpu_memory instead of memory)
+        # Check if pivot created gpu_memory columns directly
+        if "average_gpu_memory" not in result.columns:
+            if "average_memory" in result.columns:
+                result = result.rename({"average_memory": "average_gpu_memory"})
+        if "max_gpu_memory" not in result.columns:
+            if "max_memory" in result.columns:
+                result = result.rename({"max_memory": "max_gpu_memory"})
+        
+        # Add missing columns with null values
+        expected_cols = ["average_gpu_utilization", "max_gpu_utilization", "average_gpu_memory", "max_gpu_memory"]
+        for col in expected_cols:
+            if col not in result.columns:
+                result = result.with_columns(pl.lit(None).cast(pl.Float64).alias(col))
+        
+        return result.select(
+            pl.col("date").cast(pl.Date),
+            pl.col("average_gpu_utilization").cast(pl.Float64),
+            pl.col("max_gpu_utilization").cast(pl.Float64),
+            pl.col("average_gpu_memory").cast(pl.Float64),
+            pl.col("max_gpu_memory").cast(pl.Float64),
         )
     
-    def __create_run_df(self, run: Run) -> pl.DataFrame:
+    def __create_run_df(self, run: Run, company_name: str) -> pl.DataFrame:
         duration_df = self.__calculate_daily_duration(run.created_at, run.updated_at)
         
         metrics_columns = [
@@ -368,13 +413,14 @@ class RunManager:
             else duration_df.join(run.metrics_df, on=["date"], how="left")
         )
         
-        company_name, project, run_id = run.run_path.split('/')
+        # Use company_name from config, not from run_path
+        _, project, run_id = run.run_path.split('/')
         
         return new_run_df.with_columns([
             pl.lit(company_name).alias("company_name"),
             pl.lit(project).alias("project"),
             pl.lit(run_id).alias("run_id"),
-            pl.lit(run.user_name).alias("user_name"),
+            pl.lit(run.user_name if run.user_name else "unknown").cast(pl.String).alias("user_name"),
             pl.lit(json.dumps(run.tags)).alias("tags"),
             pl.lit(run.created_at).cast(pl.Datetime).alias("created_at"),
             pl.lit(run.updated_at).cast(pl.Datetime).alias("updated_at"),

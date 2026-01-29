@@ -29,34 +29,31 @@ companies:
   #     - abeja-geniac
   #   schedule:
   #     - date: "2025-08-11"
-  #       assigned_gpu_node: 16      # Source: 3サイクル目モニタリング方法
+  #       assigned_gpu_node: 2       # temporaryly decreased to 2 nodes
+  #     - date: "2025-10-01"
+  #       assigned_gpu_node: 16      # recover to 16 nodes from 10/1
   #     - date: "2026-02-28"
   #       assigned_gpu_node: 0
-  #   # include_project_pattern: "pattern" # 含めるプロジェクトのパターン（オプション）    
-  #   # ignore_project_pattern: "pattern" # 除外するプロジェクトのパターン（オプション）
 
   # ### AIdeaLab ###
   # - company: aidealab-geniac
   #   teams:
   #     - aidealab-geniac
   #   schedule:
-  #     - date: "2025-08-11"
-  #       assigned_gpu_node: 2
-  #     - date: "2026-02-28"
+  #     - date: "2025-09-01"
+  #       assigned_gpu_node: 3
+  #     - date: "2026-01-31"
   #       assigned_gpu_node: 0
-  #   # include_project_pattern: "pattern" # 含めるプロジェクトのパターン（オプション）    
-  #   # ignore_project_pattern: "pattern" # 除外するプロジェクトのパターン（オプション）
-
 
   # ### AiHUB ###
-  # # - company: aihub-geniac
-  # #   teams:
-  # #     - aihub-geniac
-  # #   schedule:
-  # #     - date: "2025-08-11"
-  # #       assigned_gpu_node: 5
-  # #     - date: "2026-02-28"
-  # #       assigned_gpu_node: 0
+  # - company: aihub-geniac
+  #   teams:
+  #     - aihub-geniac
+  #   schedule:
+  #     - date: "2025-08-11"
+  #       assigned_gpu_node: 5
+  #     - date: "2026-02-28"
+  #       assigned_gpu_node: 0
 
   # ### AI inside ###
   # - company: aiinside-geniac
@@ -67,18 +64,16 @@ companies:
   #       assigned_gpu_node: 12
   #     - date: "2026-02-28"
   #       assigned_gpu_node: 0
-  #   include_project_pattern: "pattern" # 含めるプロジェクトのパターン（オプション）    
-  #   # ignore_project_pattern: "pattern" # 除外するプロジェクトのパターン（オプション）
 
-  # # ### EQUES ###
-  # # - company: eques-geniac
-  # #   teams:
-  # #     - eques-geniac
-  # #   schedule:
-  # #     - date: "2024-10-25"
-  # #       assigned_gpu_node: 1
-  # #     - date: "2025-04-24"
-  # #       assigned_gpu_node: 0
+  # ### EQUES ###
+  # - company: eques-geniac
+  #   teams:
+  #     - eques-geniac
+  #   schedule:
+  #     - date: "2024-10-25"
+  #       assigned_gpu_node: 1
+  #     - date: "2025-04-24"
+  #       assigned_gpu_node: 0
 
   # ### Kotoba Technologies Japan ###
   # - company: kotoba-geniac
@@ -89,8 +84,6 @@ companies:
   #       assigned_gpu_node: 32
   #     - date: "2026-02-28"
   #       assigned_gpu_node: 0
-  #   # include_project_pattern: "pattern" # 含めるプロジェクトのパターン（オプション）    
-  #   # ignore_project_pattern: "pattern" # 除外するプロジェクトのパターン（オプション）
 
   # ## NABLAS ###
   # - company: nablas-geniac
@@ -98,6 +91,8 @@ companies:
   #     - nablas-geniac
   #   schedule:
   #     - date: "2025-08-26"
+  #       assigned_gpu_node: 2
+  #     - date: "2025-09-22"
   #       assigned_gpu_node: 3
   #     - date: "2026-02-28"
   #       assigned_gpu_node: 0
@@ -113,34 +108,34 @@ companies:
   #       assigned_gpu_node: 0
 
   # ### オルツ ###
-  # # - company: alt-geniac
-  # #   teams:
-  # #     - alt-geniac
-  # #   schedule:
-  # #     - date: "2024-10-25"
-  # #       assigned_gpu_node: 16
-  # #     - date: "2025-05-01"
-  # #       assigned_gpu_node: 0
+  # - company: alt-geniac
+  #   teams:
+  #     - alt-geniac
+  #   schedule:
+  #     - date: "2024-10-25"
+  #       assigned_gpu_node: 16
+  #     - date: "2025-05-01"
+  #       assigned_gpu_node: 0
 
   # ### 国立研究開発法人海洋研究開発機構 ###
-  # # - company: jamstec-geniac
-  # #   teams:
-  # #     - jamstec-geniac
-  # #   schedule:
-  # #     - date: "2024-10-25"
-  # #       assigned_gpu_node: 2
-  # #     - date: "2025-04-24"
-  # #       assigned_gpu_node: 0
+  # - company: jamstec-geniac
+  #   teams:
+  #     - jamstec-geniac
+  #   schedule:
+  #     - date: "2024-10-25"
+  #       assigned_gpu_node: 2
+  #     - date: "2025-04-24"
+  #       assigned_gpu_node: 0
 
   # ### カラクリ ###
-  # # - company: karakuri-geniac
-  # #   teams:
-  # #     - karakuri-geniac
-  # #   schedule:
-  # #     - date: "2024-10-25"
-  # #       assigned_gpu_node: 24
-  # #     - date: "2025-04-24"
-  # #       assigned_gpu_node: 0
+  # - company: karakuri-geniac
+  #   teams:
+  #     - karakuri-geniac
+  #   schedule:
+  #     - date: "2024-10-25"
+  #       assigned_gpu_node: 24
+  #     - date: "2025-04-24"
+  #       assigned_gpu_node: 0
 
   # ### ストックマーク ###
   # - company: stockmark-geniac
@@ -154,34 +149,34 @@ companies:
   #   include_project_pattern: "geniac3-gpu-info"
 
   # ### データグリッド ###
-  # # - company: datagrid-geniac
-  # #   teams:
-  # #     - datagrid-geniac
-  # #   schedule:
-  # #     - date: "2024-10-25"
-  # #       assigned_gpu_node: 16
-  # #     - date: "2025-05-01"
-  # #       assigned_gpu_node: 0
+  # - company: datagrid-geniac
+  #   teams:
+  #     - datagrid-geniac
+  #   schedule:
+  #     - date: "2024-10-25"
+  #       assigned_gpu_node: 16
+  #     - date: "2025-05-01"
+  #       assigned_gpu_node: 0
 
   # ### ヒューマノーム研究所 ###
-  # # - company: humanome-geniac
-  # #   teams:
-  # #     - humanome-geniac
-  # #   schedule:
-  # #     - date: "2024-10-25"
-  # #       assigned_gpu_node: 4
-  # #     - date: "2025-04-24"
-  # #       assigned_gpu_node: 0
+  # - company: humanome-geniac
+  #   teams:
+  #     - humanome-geniac
+  #   schedule:
+  #     - date: "2024-10-25"
+  #       assigned_gpu_node: 4
+  #     - date: "2025-04-24"
+  #       assigned_gpu_node: 0
 
   # ### フューチャー研究所 ###
-  # # - company: future-geniac
-  # #   teams:
-  # #     - future-geniac
-  # #   schedule:
-  # #     - date: "2024-10-25"
-  # #       assigned_gpu_node: 4
-  # #     - date: "2025-04-24"
-  # #       assigned_gpu_node: 0
+  # - company: future-geniac
+  #   teams:
+  #     - future-geniac
+  #   schedule:
+  #     - date: "2024-10-25"
+  #       assigned_gpu_node: 4
+  #     - date: "2025-04-24"
+  #       assigned_gpu_node: 0
 
   # ### リコー (6 months) ###
   # - company: ricoh-geniac
@@ -190,28 +185,30 @@ companies:
   #   schedule:
   #     - date: "2025-08-12"
   #       assigned_gpu_node: 1
+  #     - date: "2024-12-05"
+  #       assigned_gpu_node: 5        
   #     - date: "2026-02-07"
   #       assigned_gpu_node: 0
 
   # ### リコー (40 days) ###
-  # # - company: ricoh2-geniac
-  # #   teams:
-  # #     - ricoh2-geniac
-  # #   schedule:
-  # #     - date: "2026-01-01"
-  # #       assigned_gpu_node: 8
-  # #     - date: "2026-02-07"
-  # #       assigned_gpu_node: 0
+  # - company: ricoh2-geniac
+  #   teams:
+  #     - ricoh2-geniac
+  #   schedule:
+  #     - date: "2026-01-01"
+  #       assigned_gpu_node: 8
+  #     - date: "2026-02-07"
+  #       assigned_gpu_node: 0
 
   # ### ユビタス ###
-  # # - company: ubitus-geniac
-  # #   teams:
-  # #     - ubitus-geniac
-  # #   schedule:
-  # #     - date: "2024-10-25"
-  # #       assigned_gpu_node: 32
-  # #     - date: "2025-04-24"
-  # #       assigned_gpu_node: 0
+  # - company: ubitus-geniac
+  #   teams:
+  #     - ubitus-geniac
+  #   schedule:
+  #     - date: "2024-10-25"
+  #       assigned_gpu_node: 32
+  #     - date: "2025-04-24"
+  #       assigned_gpu_node: 0
 
   # ### Zen intelligence ###
   # - company: zenintelligence-geniac
@@ -244,9 +241,9 @@ companies:
   #       assigned_gpu_node: 0
 
   # ### Nishika ###
-  # - company: nishika-geniac
+  # - company: nishika-org
   #   teams:
-  #     - nishika-geniac
+  #     - nishika-org
   #   schedule:
   #     - date: "2025-08-12"
   #       assigned_gpu_node: 1
@@ -268,9 +265,9 @@ companies:
   #   teams:
   #     - airion-geniac
   #   schedule:
-  #     - date: "2025-08-11"
-  #       assigned_gpu_node: 8
-  #     - date: "2026-02-28"
+  #     - date: "2025-08-14"
+  #       assigned_gpu_node: 4
+  #     - date: "2026-02-14"
   #       assigned_gpu_node: 0
 
   # ### NexaScience ###
@@ -293,12 +290,46 @@ companies:
   #     - date: "2026-02-07"
   #       assigned_gpu_node: 0
 
-  ### Premedi ###
+  # ### Premedi (original - disabled) ###
+  # - company: premedi-geniac
+  #   teams:
+  #     - premedi-geniac
+  #   schedule:
+  #     - date: "2025-08-28"
+  #       assigned_gpu_node: 1
+  #     - date: "2026-02-27"
+  #       assigned_gpu_node: 0
+
+  ### Premedi-company ###
   - company: premedi-geniac
     teams:
       - premedi-geniac
+    ignore_project_pattern: 
+      - "medical-guideline-extraction"
+      - "MAID-LLM-Runs"
+      - "Guideline-Extraction"
+      - "Feature-Embed-pv"
+    ignore_users:
+      - "kazumkob"
     schedule:
       - date: "2025-08-28"
+        assigned_gpu_node: 1
+      - date: "2026-02-27"
+        assigned_gpu_node: 0
+
+  ### Premedi-ncc ###
+  - company: ncc-geniac
+    teams:
+      - premedi-geniac
+    include_project_pattern: 
+      - "medical-guideline-extraction"
+      - "MAID-LLM-Runs"
+      - "Guideline-Extraction"
+      - "Feature-Embed-pv"
+    include_users:
+      - "kazumkob"
+    schedule:
+      - date: "2025-11-27"
         assigned_gpu_node: 1
       - date: "2026-02-27"
         assigned_gpu_node: 0

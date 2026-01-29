@@ -48,7 +48,7 @@ class Run:
     host_name: str
     gpu_name: str
     gpu_count: int
-    metrics_df: pl.DataFrame = pl.DataFrame()
+    metrics_df: pl.DataFrame = field(default_factory=pl.DataFrame)
 
 @dataclass
 class Project:
