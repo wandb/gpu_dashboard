@@ -82,9 +82,7 @@ def set_gpucount(node: EasyDict, team: str) -> int:
         
         # 5. Fallback Logic for Zero Nodes
         if num_nodes == 0:
-            # Special Case: Ricoh (Extract from Run Name)
-            # [Governance] Ricoh's discipline is to put node count in the run name.
-            if team == "ricoh-geniac": 
+            if team == "mercari-geniac": 
                 m = re.search(r"(\d+)\s*Node", node.name, re.IGNORECASE)
                 per_node = default_gpu_count or 8
                 nodes = int(m.group(1)) if m else 1
@@ -95,11 +93,9 @@ def set_gpucount(node: EasyDict, team: str) -> int:
             return default_gpu_count
 
         # 6. Calculate Final Count based on Team Archetype
-        if team == "karakuri-geniac":
-            # Karakuri uses 'world size' which usually means Total GPUs, not Nodes.
-            # But here logic implies node count? Need to verify if this logic holds.
+        if team == "mercari-geniac":
             gpu_count = num_nodes
-        elif team in ["abeja-geniac", "alt-geniac", "kotoba-geniac"]:
+        elif team in ["mercari-geniac", "mercari-geniac", "mercari-geniac"]:
             # Standard Multi-Node: Nodes * 8 (Standard A100/H100 Node)
             gpu_count = num_nodes * 8
         elif gpu_key:
