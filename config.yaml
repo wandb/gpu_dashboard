@@ -15,7 +15,7 @@ dataset:
   artifact_name: all_runs_data
 
 companies:
-  ### Spectee — H100 x2（8/1–1/31）###
+  ### mercari — H100 xx（7/10–x/xx）###
   - company: <ENTITY_NAME>
     teams: [TEAM_NAME]
     schedule:
