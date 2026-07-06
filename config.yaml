@@ -1,0 +1,25 @@
+enable_alert: true
+ignore_tags: ["other_gpu", "others_gpu"]  # 増えるようだったらfnmatchで対応する
+wandb_dir: /tmp/wandb
+max_workers: 1
+
+dashboard:
+  entity: geniac-gpu
+  project: gpu-dashboard4
+  # project: gpu-dashboard2-dev  # for development
+  tag_for_latest: latest
+
+dataset:
+  entity: geniac-gpu
+  project: gpu-dashboard4
+  artifact_name: all_runs_data
+
+companies:
+  ### mercari — H100 xx（7/10–x/xx）###
+  - company: <ENTITY_NAME>
+    teams: [TEAM_NAME]
+    schedule:
+      - date: "2026-07-10"
+        assigned_gpu_node: 2
+      - date: "2027-02-01"
+        assigned_gpu_node: 0
