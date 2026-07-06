@@ -1,4 +1,4 @@
-# GPU Dashboard for Geniac3
+# GPU Dashboard for Geniac4
 
 GPU使用率監視・レポート生成システム
 
