@@ -1,0 +1,23 @@
+enable_alert: false
+ignore_tags: ["other_gpu", "others_gpu"]
+wandb_dir: ./wandb_dir
+max_workers: 1
+slurm_teams: [geniac]
+
+dashboard:
+  entity: geniac
+  project: gpu-dashboard-slurm-test
+  tag_for_latest: latest
+
+dataset:
+  entity: geniac
+  project: gpu-dashboard-slurm-test
+  artifact_name: all_runs_data
+
+companies:
+  - company: geniac
+    teams: [geniac]
+    include_project_pattern: slurm-meta-test
+    schedule:
+      - date: "2026-09-01"
+        assigned_gpu_node: 2
