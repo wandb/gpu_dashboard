@@ -1,6 +1,6 @@
 enable_alert: false
 ignore_tags: ["other_gpu", "others_gpu"]
-wandb_dir: /tmp/wandb
+wandb_dir: ./wandb_dir  # shared login node: /tmp/wandb may be owned by another user
 max_workers: 1
 slurm_teams: [rsong]
 
@@ -17,6 +17,7 @@ dataset:
 companies:
   - company: rsong
     teams: [rsong]
+    include_project_pattern: slurm-meta-test
     schedule:
       - date: "2026-09-01"
         assigned_gpu_node: 2
