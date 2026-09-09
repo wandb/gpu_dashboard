@@ -43,13 +43,26 @@ def get_config_value_multi(config: Dict[str, Any], keys: tuple) -> int:
             return value
     return 0
 
-def set_gpucount(node: EasyDict, team: str) -> int:
+def set_gpucount(node: EasyDict, team: str, slurm: Optional[Dict[str, Any]] = None) -> int:
     """
     Core Logic: Calculate 'True Compute' GPU Count for a given Run.
-    
+
     This function acts as the 'Judge'. It decides how many GPUs a run *actually* represents,
     filtering out configuration noise and enforcing the governance rules defined in TEAM_CONFIGS.
+
+    Priority: Slurm metadata (job-level allocation) -> TEAM_CONFIGS / W&B config -> runInfo.gpuCount
     """
+    # 0. Slurm metadata: job_num_nodes * gpus_on_node = GPUs allocated to the whole Slurm job.
+    #    NOTE: job_gpus is the GPU *ID* on the node, not a count. Do not use it.
+    #    When a Slurm job produces one W&B run per node, callers must dedupe by slurm.job_id.
+    if slurm and slurm.get("job_num_nodes") and slurm.get("gpus_on_node"):
+        try:
+            slurm_gpu_count = int(slurm["job_num_nodes"]) * int(slurm["gpus_on_node"])
+            if slurm_gpu_count > 0:
+                return slurm_gpu_count
+        except (ValueError, TypeError):
+            pass
+
     # 1. Default Baseline (WandB's reported GPU count)
     default_gpu_count = node.runInfo.gpuCount if node.runInfo else 0
     

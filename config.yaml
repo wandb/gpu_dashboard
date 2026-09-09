@@ -2,6 +2,10 @@ enable_alert: true
 ignore_tags: ["other_gpu", "others_gpu"]  # 増えるようだったらfnmatchで対応する
 wandb_dir: /tmp/wandb
 max_workers: 1
+# Teams whose runs carry Slurm metadata (wandb-metadata.json -> slurm).
+# For these teams: gpu_count = job_num_nodes * gpus_on_node, and runs sharing the same
+# slurm.job_id are merged into one allocation. Other teams are unaffected.
+slurm_teams: [TEAM_NAME]
 
 dashboard:
   entity: geniac-gpu

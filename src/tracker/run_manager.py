@@ -190,13 +190,15 @@ class RunManager:
     
     def __process_nodes(self, nodes: List[EasyDict], team: str, project: str, start: str, end: str) -> List[Run]:
         runs = []
+        use_slurm = team in set(CONFIG.get("slurm_teams", []) or [])
         for node in nodes:
             createdAt = dt.datetime.fromisoformat(node.createdAt.rstrip('Z')) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
             updatedAt = dt.datetime.fromisoformat(node.heartbeatAt.rstrip('Z')) + dt.timedelta(hours=JAPAN_UTC_OFFSET)
 
             if self.__is_run_valid(node, createdAt, updatedAt, start, end) or self.test_mode:
                 run_path = "/".join((team, project, node.name))
-                gpu_count = set_gpucount(node, team)
+                slurm = self.__fetch_slurm_metadata(run_path) if use_slurm else None
+                gpu_count = set_gpucount(node, team, slurm=slurm)
                 user_name = node.user.username if node.get("user") else "unknown"
                 run = Run(
                     run_path=run_path,
@@ -208,11 +210,47 @@ class RunManager:
                     host_name=node.host,
                     gpu_name=node.runInfo.gpu if node.runInfo else None,
                     gpu_count=gpu_count,
+                    slurm_job_id=str(slurm["job_id"]) if slurm and slurm.get("job_id") else None,
                 )
                 runs.append(run)
+        if use_slurm:
+            runs = self.__merge_slurm_jobs(runs)
         self.total_valid_runs += len(runs)
         print(f"Total valid runs for {team}/{project}: {len(runs)}")
         return runs
+
+    def __fetch_slurm_metadata(self, run_path: str) -> dict | None:
+        """Slurm info lives in wandb-metadata.json (Run.metadata), not in the GraphQL run node."""
+        try:
+            metadata = self.api.run(run_path).metadata or {}
+            return metadata.get("slurm") or None
+        except Exception as e:
+            print(f"Failed to fetch slurm metadata for {run_path}: {str(e)}")
+            return None
+
+    def __merge_slurm_jobs(self, runs: List[Run]) -> List[Run]:
+        """
+        One Slurm job may create one W&B run per node, each carrying the same slurm.job_id
+        and the same job-level gpu_count. Count the allocation once: keep the first run,
+        widen its time span to min(created_at) .. max(heartbeat_at) across the job.
+        Runs without slurm_job_id pass through unchanged.
+        """
+        merged: List[Run] = []
+        by_job: dict = {}
+        for run in runs:
+            if not run.slurm_job_id:
+                merged.append(run)
+                continue
+            head = by_job.get(run.slurm_job_id)
+            if head is None:
+                by_job[run.slurm_job_id] = run
+                merged.append(run)
+            else:
+                head.created_at = min(head.created_at, run.created_at)
+                head.updated_at = max(head.updated_at, run.updated_at)
+        if by_job:
+            print(f"Merged {len(runs) - len(merged)} run(s) into {len(by_job)} slurm job(s)")
+        return merged
 
     def __is_run_valid(self, node, createdAt, updatedAt, start, end) -> bool:
         # 必要な情報が含まれていないものはスキップ

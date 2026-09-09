@@ -48,6 +48,7 @@ class Run:
     host_name: str
     gpu_name: str
     gpu_count: int
+    slurm_job_id: str | None = None
     metrics_df: pl.DataFrame = field(default_factory=pl.DataFrame)
 
 @dataclass

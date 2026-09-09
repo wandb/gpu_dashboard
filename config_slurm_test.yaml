@@ -1,0 +1,22 @@
+enable_alert: false
+ignore_tags: ["other_gpu", "others_gpu"]
+wandb_dir: /tmp/wandb
+max_workers: 1
+slurm_teams: [rsong]
+
+dashboard:
+  entity: rsong
+  project: gpu-dashboard-slurm-test
+  tag_for_latest: latest
+
+dataset:
+  entity: rsong
+  project: gpu-dashboard-slurm-test
+  artifact_name: all_runs_data
+
+companies:
+  - company: rsong
+    teams: [rsong]
+    schedule:
+      - date: "2026-09-01"
+        assigned_gpu_node: 2
