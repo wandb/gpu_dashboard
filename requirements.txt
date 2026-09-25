@@ -1,4 +1,4 @@
-wandb==0.26.1
+wandb==0.30.0
 polars==0.20.3
 pyarrow==14.0.2
 pandas==2.1.4

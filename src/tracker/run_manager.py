@@ -12,7 +12,6 @@ from fnmatch import fnmatch
 from tqdm import tqdm
 from easydict import EasyDict
 from typing import List
-from wandb_gql import gql
 
 from src.tracker.common import JAPAN_UTC_OFFSET, LOGGED_AT, GQL_QUERY, Run, Project
 from src.tracker.config_parser import parse_configs
@@ -166,9 +165,9 @@ class RunManager:
 
         while True:
             try:
-                results = self.api.client.execute(
-                    gql(GQL_QUERY),
-                    {
+                results = self.api._service_api.execute_graphql(
+                    GQL_QUERY,
+                    variables={
                         "entity": team,
                         "project": project,
                         "first": 1000,
