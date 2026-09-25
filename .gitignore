@@ -102,3 +102,6 @@ tmp/
 # Backup files
 *.bak
 *.backup
+
+# Local artifact cache
+artifacts/

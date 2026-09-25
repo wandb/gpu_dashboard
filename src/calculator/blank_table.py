@@ -66,7 +66,7 @@ class BlankTable:
                 .select(
                     pl.col("company").cast(pl.Utf8),
                     pl.col("date").cast(pl.Date),
-                    pl.col("assigned_gpu_node").cast(pl.Int64),
+                    pl.col("assigned_gpu_node").cast(pl.Float64),
                 ).filter(
                     pl.col("assigned_gpu_node") > 0
                 )
@@ -95,7 +95,7 @@ class BlankTable:
             .select(
                 pl.col("company").cast(pl.Utf8),
                 pl.col("week_start").cast(pl.Date),
-                pl.col("assigned_gpu_node").cast(pl.Int64),
+                pl.col("assigned_gpu_node").cast(pl.Float64),
             )
         )
 
@@ -117,7 +117,7 @@ class BlankTable:
             .select(
                 pl.col("company").cast(pl.Utf8),
                 pl.col("year_month").cast(pl.Utf8),
-                pl.col("assigned_gpu_node").cast(pl.Int64),
+                pl.col("assigned_gpu_node").cast(pl.Float64),
             )
         )
 
@@ -129,6 +129,6 @@ class BlankTable:
             .sort("company")
             .select(
                 pl.col("company").cast(pl.Utf8),
-                pl.col("assigned_gpu_node").cast(pl.Int64),
+                pl.col("assigned_gpu_node").cast(pl.Float64),
             )
         )

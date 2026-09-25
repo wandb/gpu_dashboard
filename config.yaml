@@ -98,7 +98,7 @@ companies:
       - newmo-geniac
     schedule:
       - date: "2026-07-01"
-        assigned_gpu_node: 9
+        assigned_gpu_node: 4.5   # 9 tray x 4 GPU = 36 GPU = 4.5 x 8-GPU node
       - date: "2027-01-31"
         assigned_gpu_node: 0
 
